@@ -9,17 +9,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // === 2. Owner Dashboard (કૂકી હોય તો જ પરવાનગી) ===
-  if (path === '/dashboard/owner') {
-    if (sessionCookie) {
-      console.log("✅ Owner cookie found. Allowing access.");
-      return NextResponse.next({ request });
-    }
-    console.log("🔴 No Owner cookie. Redirecting to login.");
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // === 3. Karigar Dashboard (કૂકી હોય તો જ પરવાનગી) ===
+  // === 2. Karigar Dashboard (કૂકી હોય તો જ) ===
   if (path === '/dashboard/karigar') {
     if (sessionCookie) {
       return NextResponse.next({ request });
@@ -27,6 +17,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // === 3. Owner Dashboard: હવે કોઈ ચેક નથી (ક્લાયન્ટ સાઈડ ચેક કરશે) ===
+  // બધા અન્ય રૂટ્સ (જેમ કે /dashboard/owner) ને મંજૂરી આપો
   return NextResponse.next({ request });
 }
 

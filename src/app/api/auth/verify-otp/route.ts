@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
     businessName: ''
   }), {
     httpOnly: false,
-    secure: process.env.NODE_ENV === 'production', // Vercel પર true થશે
-    sameSite: 'lax', // સૌથી સલામત સેટિંગ
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   });
