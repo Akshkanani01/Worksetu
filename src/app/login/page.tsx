@@ -10,9 +10,11 @@ export default function LoginPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'owner' | 'karigar'>('owner');
   
+  // Owner Email & Password
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
+  // Karigar ID & PIN
   const [karigarId, setKarigarId] = useState('');
   const [pin, setPin] = useState(['', '', '', '']);
   
@@ -21,44 +23,39 @@ export default function LoginPage() {
   
   const supabase = createClient();
 
-  // ===== Owner: Email & Password Login (FIXED REDIRECT) =====
+  // ===== Owner Login =====
   const handleOwnerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage(null);
 
     try {
-      console.log("🟢 Attempting owner login...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error("❌ Login error:", error);
         setMessage({ type: 'error', text: error.message });
         setIsLoading(false);
         return;
       }
 
       if (data.session) {
-        console.log("✅ Session found. Redirecting...");
-        // 500ms રાહ જુઓ જેથી બ્રાઉઝર કૂકી સેટ કરી શકે, પછી સંપૂર્ણ પેજ રીડાયરેક્ટ કરો
         setTimeout(() => {
           window.location.href = '/dashboard/owner';
         }, 500);
       } else {
-        setMessage({ type: 'error', text: 'No session returned. Please try again.' });
+        setMessage({ type: 'error', text: 'No session returned.' });
         setIsLoading(false);
       }
     } catch (err) {
-      console.error("🔥 Unexpected error:", err);
-      setMessage({ type: 'error', text: 'Something went wrong. Please try again.' });
+      setMessage({ type: 'error', text: 'Something went wrong.' });
       setIsLoading(false);
     }
   };
 
-  // ===== Karigar: PIN Login (UNCHANGED) =====
+  // ===== Karigar Login (PIN) =====
   const handleKarigarLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -72,20 +69,26 @@ export default function LoginPage() {
     }
 
     try {
+      console.log("🟢 Attempting karigar login:", { karigarId, pin: fullPin });
       const res = await fetch('/api/auth/karigar-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ karigarId, pin: fullPin })
+        body: JSON.stringify({ karigarId, pin: fullPin }),
+        credentials: 'include',
       });
 
+      console.log("🔁 Response status:", res.status);
       if (res.redirected) {
+        console.log("✅ Redirecting to:", res.url);
         window.location.href = res.url;
       } else {
         const data = await res.json();
+        console.error("❌ Login failed:", data);
         setMessage({ type: 'error', text: data.error || 'Invalid ID or PIN.' });
         setIsLoading(false);
       }
     } catch (err) {
+      console.error("🔥 Exception:", err);
       setMessage({ type: 'error', text: 'Connection failed. Try again.' });
       setIsLoading(false);
     }
@@ -99,13 +102,11 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md glass-panel-deep rounded-3xl p-8 border border-white/10 shadow-2xl shadow-black/60">
         
-        {/* Logo */}
         <div className="flex items-center gap-2 mb-8 justify-center">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center font-black text-[#04080F] text-lg">W</div>
           <span className="text-xl font-bold tracking-tight text-white">WORKSETU</span>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-[#0A1025] p-1 rounded-full border border-white/10 mb-8">
           <button 
             onClick={() => setActiveTab('owner')}
@@ -121,7 +122,6 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Message Alert */}
         {message && (
           <div className={`mb-6 p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${message.type === 'success' ? 'bg-green-500/20 text-green-300 border border-green-500/20' : 'bg-red-500/20 text-red-300 border border-red-500/20'}`}>
             {message.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
@@ -146,7 +146,6 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-
             <div>
               <label className="text-xs font-medium text-slate-400 mb-1.5 block">Password</label>
               <div className="relative">
@@ -166,7 +165,6 @@ export default function LoginPage() {
                 </Link>
               </div>
             </div>
-
             <button 
               type="submit" 
               disabled={isLoading}
@@ -174,8 +172,6 @@ export default function LoginPage() {
             >
               {isLoading ? 'Logging in...' : 'Login'} <ArrowRight className="w-4 h-4" />
             </button>
-            
-            {/* Sign Up Link */}
             <div className="text-center text-xs text-slate-500 mt-2">
               Don't have an account? <Link href="/signup" className="text-purple-400 hover:underline cursor-pointer">Sign up</Link>
             </div>
@@ -186,7 +182,7 @@ export default function LoginPage() {
         {activeTab === 'karigar' && (
           <form onSubmit={handleKarigarLogin} className="space-y-6">
             <div>
-              <label className="text-xs font-medium text-slate-400 mb-1.5 block">Karigar ID / Phone</label>
+              <label className="text-xs font-medium text-slate-400 mb-1.5 block">Karigar ID</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
@@ -223,6 +219,7 @@ export default function LoginPage() {
                   />
                 ))}
               </div>
+              <p className="text-[10px] text-slate-500 mt-2">Enter the 4-digit PIN provided by your Owner.</p>
             </div>
 
             <button 

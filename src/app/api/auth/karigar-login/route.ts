@@ -10,18 +10,15 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const { karigarId, pin } = await req.json();
+    console.log("🔑 Karigar login attempt:", { karigarId, pin });
 
-    console.log("🔑 Login attempt:", { karigarId, pin });
-
+    // Validate input
     if (!karigarId || !pin || pin.length !== 4) {
       console.error("❌ Invalid input");
-      return NextResponse.json(
-        { success: false, error: 'Invalid credentials' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Invalid credentials' }, { status: 400 });
     }
 
-    // 1. ડેટાબેઝમાં કારીગર શોધો
+    // Fetch karigar from database
     const { data: karigar, error } = await supabase
       .from('karigars')
       .select('id, pin_hash, name, owner_id')
@@ -32,29 +29,22 @@ export async function POST(req: NextRequest) {
 
     if (error || !karigar) {
       console.error("❌ Karigar not found:", error);
-      return NextResponse.json(
-        { success: false, error: 'Karigar not found' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Karigar not found' }, { status: 401 });
     }
 
-    // 2. PIN ચકાસો
+    // Verify PIN
     const isValid = bcrypt.compareSync(pin, karigar.pin_hash);
     console.log("🔐 PIN valid?", isValid);
 
     if (!isValid) {
-      return NextResponse.json(
-        { success: false, error: 'Incorrect PIN' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Incorrect PIN' }, { status: 401 });
     }
 
-    // 3. સેશન કૂકી સેટ કરો (httpOnly false જેથી ક્લાયન્ટ વાંચી શકે)
-    const response = NextResponse.json({
-      success: true,
-      redirect: '/dashboard/karigar'
+    // Set session cookie (httpOnly false so client can read it)
+    const response = NextResponse.json({ 
+      success: true, 
+      redirect: '/dashboard/karigar' 
     });
-
     response.cookies.set('worksetu_session', JSON.stringify({
       role: 'karigar',
       id: karigar.id,
@@ -69,12 +59,8 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ Login successful, cookie set");
     return response;
-
   } catch (error) {
     console.error("🔥 Unhandled error:", error);
-    return NextResponse.json(
-      { success: false, error: 'Server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
