@@ -14,8 +14,7 @@ export async function POST(req: NextRequest) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
     // 2. Magic Link બનાવો (verify-otp પર જાય)
-    const magicLinkUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-otp?email=${encodeURIComponent(email)}&otp=${otp}`;
-
+    const magicLinkUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/owner?email=${encodeURIComponent(email)}&otp=${otp}`;
     // 3. Resend વડે ઈમેલ મોકલો (Supabase Auth નો કોઈ ઉપયોગ નથી!)
     const { data, error } = await resend.emails.send({
       from: 'WorkSetu <onboarding@resend.dev>',
