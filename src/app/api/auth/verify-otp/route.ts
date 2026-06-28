@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
   }
 
+  // 1. OTP ચકાસો
   const { data, error } = await supabase
     .from('otps')
     .select('*')
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
 
   await supabase.from('otps').delete().eq('id', data.id);
 
+  // 2. કૂકી સેટ કરો (હવે sameSite 'lax' અને secure production પર)
   const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/owner`);
   response.cookies.set('worksetu_session', JSON.stringify({
     role: 'owner',
@@ -39,11 +41,12 @@ export async function GET(req: NextRequest) {
     businessName: ''
   }), {
     httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production', // Vercel પર true થશે
+    sameSite: 'lax', // સૌથી સલામત સેટિંગ
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   });
 
+  console.log("✅ Cookie set with sameSite:lax for:", email);
   return response;
 }
