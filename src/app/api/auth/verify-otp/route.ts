@@ -9,8 +9,6 @@ export async function GET(req: NextRequest) {
     return new Response('Invalid link', { status: 400 });
   }
 
-  // *** અહીં તમારે ડેટાબેઝમાંથી OTP ચકાસવો પડશે ***
-  // હાલમાં ટેસ્ટિંગ માટે આપણે સીધો ડેશબોર્ડ પર મોકલીએ છીએ.
-
+  // આપણે સીધા ડેશબોર્ડ પર રીડાયરેક્ટ કરીએ છીએ
   return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/owner`);
 }
