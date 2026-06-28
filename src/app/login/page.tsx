@@ -3,50 +3,53 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, User, Lock, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { createClient } from '@/lib/supabase.client';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'owner' | 'karigar'>('owner');
+  
+  // Owner Email & Password State
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  // Karigar State
   const [karigarId, setKarigarId] = useState('');
   const [pin, setPin] = useState(['', '', '', '']);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const router = useRouter();
+  
+  const supabase = createClient();
 
-  // Handle Magic Link Login (Owner)
-    const handleOwnerLogin = async (e: React.FormEvent) => {
+  // ===== Owner: Email & Password Login =====
+  const handleOwnerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage(null);
 
     try {
-      const res = await fetch('/api/auth/magic-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        setMessage({ type: 'success', text: data.message || 'Magic Link sent! Check your email.' });
-        setTimeout(() => setIsLoading(false), 60000);
-      } else {
-        // === ખાસ ચેક: જો રેટ લિમિટનો એરર હોય તો ===
-        if (data.error && data.error.toLowerCase().includes('rate limit')) {
-          setMessage({ type: 'error', text: '⚠️ Too many requests. Please wait a few minutes before trying again.' });
-        } else {
-          setMessage({ type: 'error', text: data.error || 'Failed to send link.' });
-        }
-        setTimeout(() => setIsLoading(false), 5000);
+
+      if (error) {
+        setMessage({ type: 'error', text: error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.session) {
+        router.push('/dashboard/owner');
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'Something went wrong. Try again.' });
-      setTimeout(() => setIsLoading(false), 5000);
+      setIsLoading(false);
     }
   };
 
-  // Handle PIN Login (Karigar)
+  // ===== Karigar: PIN Login =====
   const handleKarigarLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -66,30 +69,28 @@ export default function LoginPage() {
         body: JSON.stringify({ karigarId, pin: fullPin })
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        // Redirect is handled via Middleware or manual push
-        router.push('/dashboard/karigar');
+      if (res.redirected) {
+        window.location.href = res.url;
       } else {
+        const data = await res.json();
         setMessage({ type: 'error', text: data.error || 'Invalid ID or PIN.' });
+        setIsLoading(false);
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'Connection failed. Try again.' });
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#04080F] text-white flex items-center justify-center px-6 py-12 relative overflow-hidden">
-      {/* Background Glows */}
       <div className="fixed top-0 left-0 w-full h-full bg-dot-grid opacity-80 z-0"></div>
       <div className="fixed top-1/2 left-1/4 w-[400px] h-[400px] bg-purple-600/20 rounded-full blur-[120px] z-0"></div>
       <div className="fixed bottom-1/2 right-1/4 w-[300px] h-[300px] bg-cyan-500/20 rounded-full blur-[120px] z-0"></div>
 
       <div className="relative z-10 w-full max-w-md glass-panel-deep rounded-3xl p-8 border border-white/10 shadow-2xl shadow-black/60">
         
-        {/* Header */}
+        {/* Logo */}
         <div className="flex items-center gap-2 mb-8 justify-center">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center font-black text-[#04080F] text-lg">W</div>
           <span className="text-xl font-bold tracking-tight text-white">WORKSETU</span>
@@ -119,11 +120,11 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Owner Login Form */}
+        {/* Owner Form (Email + Password) */}
         {activeTab === 'owner' && (
           <form onSubmit={handleOwnerLogin} className="space-y-6">
             <div>
-              <label className="text-xs font-medium text-slate-400 mb-1.5 block">Business Email Address</label>
+              <label className="text-xs font-medium text-slate-400 mb-1.5 block">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
@@ -135,19 +136,41 @@ export default function LoginPage() {
                   className="w-full bg-[#0A1025] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-purple-500 transition placeholder:text-slate-600"
                 />
               </div>
-              <p className="text-[10px] text-slate-500 mt-2">You will receive a secure Magic Link in your inbox.</p>
             </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-400 mb-1.5 block">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input 
+                  type="password" 
+                  required 
+                  placeholder="Enter your password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-[#0A1025] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-purple-500 transition placeholder:text-slate-600"
+                />
+              </div>
+              <div className="text-[10px] text-slate-500 mt-2">
+                <span className="text-purple-400 cursor-pointer hover:underline">Forgot password?</span>
+              </div>
+            </div>
+
             <button 
               type="submit" 
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3.5 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-900/30 transition-all hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLoading ? 'Sending Link...' : 'Send Magic Link'} <ArrowRight className="w-4 h-4" />
+              {isLoading ? 'Logging in...' : 'Login'} <ArrowRight className="w-4 h-4" />
             </button>
+            
+            <div className="text-center text-xs text-slate-500 mt-2">
+              Don't have an account? <span className="text-purple-400 hover:underline cursor-pointer">Sign up</span>
+            </div>
           </form>
         )}
 
-        {/* Karigar Login Form */}
+        {/* Karigar Form (Unchanged) */}
         {activeTab === 'karigar' && (
           <form onSubmit={handleKarigarLogin} className="space-y-6">
             <div>
@@ -178,7 +201,6 @@ export default function LoginPage() {
                       const newPin = [...pin];
                       newPin[index] = e.target.value.replace(/[^0-9]/g, '');
                       setPin(newPin);
-                      // Auto focus next input
                       if (e.target.value && index < 3) {
                         const nextInput = document.getElementById(`pin-${index + 1}`);
                         if (nextInput) (nextInput as HTMLInputElement).focus();
@@ -201,22 +223,7 @@ export default function LoginPage() {
             </button>
           </form>
         )}
-
-        {/* Footer Links */}
-        <div className="mt-8 text-center text-[10px] text-slate-600 border-t border-white/5 pt-6">
-          {activeTab === 'karigar' && <span>Forgot PIN? Please contact your <span className="text-purple-400 hover:underline cursor-pointer">Owner</span>.</span>}
-          {activeTab === 'owner' && <span>New to Worksetu? <a href="/" className="text-purple-400 hover:underline">Go back</a></span>}
-        </div>
       </div>
     </div>
   );
 }
-
-// Inline styles for this specific page (since we can't use global CSS, added here)
-// In a real app, use global CSS or Tailwind config.
-const cssStyles = `
-  .bg-dot-grid { background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px); background-size: 20px 20px; }
-  .glass-panel-deep { background: rgba(10, 16, 35, 0.6); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.06); }
-`;
-// Since Next.js doesn't support <style> in TSX easily here, just append this to the component or assume users have tailwind setup. 
-// For this code sample, standard Tailwind classes are prioritized.
