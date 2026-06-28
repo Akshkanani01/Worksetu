@@ -11,11 +11,8 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get('email');
   const otp = searchParams.get('otp');
 
-  if (!email || !otp) {
-    return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
-  }
+  if (!email || !otp) return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
 
-  // OTP ચકાસો
   const { data, error } = await supabase
     .from('otps')
     .select('*')
@@ -26,13 +23,10 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .single();
 
-  if (error || !data) {
-    return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
-  }
+  if (error || !data) return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
 
   await supabase.from('otps').delete().eq('id', data.id);
 
-  // કૂકી સેટ કરો – sameSite: 'none' અને secure: true ફરજિયાત
   const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/owner`);
   response.cookies.set('worksetu_session', JSON.stringify({
     role: 'owner',
@@ -41,12 +35,11 @@ export async function GET(req: NextRequest) {
     businessName: ''
   }), {
     httpOnly: false,
-    secure: true,          // HTTPS પર જ કામ કરે
-    sameSite: 'none',      // ક્રોસ-ડોમેન રીડાયરેક્ટ માટે જરૂરી
+    secure: true,
+    sameSite: 'none',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   });
 
-  console.log("✅ Cookie set with sameSite:none for:", email);
   return response;
 }
