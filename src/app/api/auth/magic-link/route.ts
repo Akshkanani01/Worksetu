@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-// Resend ક્લાયન્ટ ઇનિશિયલાઇઝ કરો
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
 export async function POST(req: NextRequest) {
@@ -12,16 +11,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // 1. 6-અંકનો રેન્ડમ OTP જનરેટ કરો
+    // 1. 6-અંકનો OTP જનરેટ કરો
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // 2. લાઈવ Vercel URL નો ઉપયોગ કરીને મેજિક લિંક બનાવો
+    // 2. Magic Link URL બનાવો
     const magicLinkUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-otp?email=${encodeURIComponent(email)}&otp=${otp}`;
 
-    // 3. Resend વડે ઈમેલ મોકલો
+    // 3. Resend વડે ઈમેલ મોકલો (ફ્રી ટાયરમાં ફક્ત તમારો જ ઈમેલ ચાલશે)
     const { data, error } = await resend.emails.send({
-      from: 'WorkSetu <onboarding@resend.dev>', // ફ્રી ટાયર માટે આ ઈમેલ જરૂરી છે
-      to: [email], // ફ્રી ટાયરમાં ફક્ત manishakanani956@gmail.com જ કામ કરશે
+      from: 'WorkSetu <onboarding@resend.dev>',
+      to: [email], // ⚠️ ટેસ્ટ સમયે ફક્ત તમારો ઈમેલ જ નાખો
       subject: '🔐 Your WorkSetu Magic Link',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #0B1120; color: white; border-radius: 12px; border: 1px solid #333;">
@@ -40,13 +39,10 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Resend Error:', error);
-      return NextResponse.json({ error: 'Failed to send email. Please try again.' }, { status: 500 });
+      return NextResponse.json({ error: 'Resend error: ' + error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Magic Link sent successfully! Check your email inbox.' 
-    });
+    return NextResponse.json({ success: true, message: 'Magic Link sent successfully!' });
 
   } catch (error) {
     console.error('Server Error:', error);
