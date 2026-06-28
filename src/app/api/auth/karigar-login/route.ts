@@ -12,13 +12,14 @@ export async function POST(req: NextRequest) {
     const { karigarId, pin } = await req.json();
     console.log("🔑 Karigar login attempt:", { karigarId, pin });
 
-    // Validate input
     if (!karigarId || !pin || pin.length !== 4) {
       console.error("❌ Invalid input");
-      return NextResponse.json({ success: false, error: 'Invalid credentials' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Invalid credentials' },
+        { status: 400 }
+      );
     }
 
-    // Fetch karigar from database
     const { data: karigar, error } = await supabase
       .from('karigars')
       .select('id, pin_hash, name, owner_id')
@@ -29,22 +30,28 @@ export async function POST(req: NextRequest) {
 
     if (error || !karigar) {
       console.error("❌ Karigar not found:", error);
-      return NextResponse.json({ success: false, error: 'Karigar not found' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Karigar not found' },
+        { status: 401 }
+      );
     }
 
-    // Verify PIN
     const isValid = bcrypt.compareSync(pin, karigar.pin_hash);
     console.log("🔐 PIN valid?", isValid);
 
     if (!isValid) {
-      return NextResponse.json({ success: false, error: 'Incorrect PIN' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Incorrect PIN' },
+        { status: 401 }
+      );
     }
 
-    // Set session cookie (httpOnly false so client can read it)
-    const response = NextResponse.json({ 
-      success: true, 
-      redirect: '/dashboard/karigar' 
-    });
+    // Set session cookie
+    const response = NextResponse.json(
+      { success: true, redirect: '/dashboard/karigar' },
+      { status: 200 }
+    );
+
     response.cookies.set('worksetu_session', JSON.stringify({
       role: 'karigar',
       id: karigar.id,
@@ -61,6 +68,9 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     console.error("🔥 Unhandled error:", error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
