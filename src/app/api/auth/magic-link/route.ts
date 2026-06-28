@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await resend.emails.send({
       from: 'WorkSetu <onboarding@resend.dev>',
-      to: [email],
+      to: 'manishakanani956@getMaxListeners.com',
       subject: '🔐 Your WorkSetu Magic Link',
       html: `... (your html)`
     });
