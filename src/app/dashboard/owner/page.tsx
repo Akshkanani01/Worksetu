@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { 
   CheckCircle2, Clock, ImageIcon, MessageSquare, LogOut, 
   Package, Loader2, Send, Users, Plus, RefreshCw,
-  Briefcase, UserPlus, X, Calendar, LayoutGrid
+  Briefcase, UserPlus, X, Calendar, LayoutGrid,
+  List, CheckCircle
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase.client';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -25,6 +26,9 @@ export default function OwnerDashboard() {
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   
+  // Tab State
+  const [activeTab, setActiveTab] = useState<'karigars' | 'all' | 'inprogress' | 'completed'>('karigars');
+  
   const [chattingWith, setChattingWith] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -41,7 +45,7 @@ export default function OwnerDashboard() {
 
   const supabase = createClient();
 
-  // === 1. Owner Session Fetch (Real Supabase Auth Only) ===
+  // === 1. Owner Session Fetch (Real Supabase Auth) ===
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -56,7 +60,6 @@ export default function OwnerDashboard() {
         businessName: '' 
       });
 
-      // Check Onboarding
       const { data: profile, error } = await supabase
         .from('owners')
         .select('*')
@@ -202,11 +205,47 @@ export default function OwnerDashboard() {
     router.push('/login'); 
   };
 
-  // === 5. Translation ===
+  // === 5. Translation Data ===
   const t = {
-    en: { overview: 'Overview', karigars: 'Karigars', tasks: 'Tasks', chat: 'Chat', total_karigars: 'Total Karigars', total_tasks: 'Total Tasks', in_progress: 'In Progress', completed: 'Completed', add_karigar: 'Add New Karigar', add_task: 'Assign New Task', select_karigar: 'Select a Karigar', task_title: 'Task Title', task_desc: 'Description', send: 'Send', reset_pin: 'Reset PIN', no_karigar_selected: 'Select a Karigar to chat', online: 'Online', loading: 'Loading...', task_details: 'Task Details', status: 'Status', assigned_to: 'Assigned to', close: 'Close' },
-    gu: { overview: 'ઝાંખી', karigars: 'કારીગરો', tasks: 'કામો', chat: 'ચેટ', total_karigars: 'કુલ કારીગરો', total_tasks: 'કુલ કામો', in_progress: 'ચાલુ કામ', completed: 'પૂર્ણ થયેલ', add_karigar: 'નવો કારીગર ઉમેરો', add_task: 'નવું કામ અસાઈન કરો', select_karigar: 'કારીગર પસંદ કરો', task_title: 'કામનું શીર્ષક', task_desc: 'વર્ણન', send: 'મોકલો', reset_pin: 'PIN રીસેટ કરો', no_karigar_selected: 'ચેટ કરવા માટે કારીગર પસંદ કરો', online: 'ઑનલાઇન', loading: 'લોડ થાય છે...', task_details: 'કામની વિગતો', status: 'સ્થિતિ', assigned_to: 'અસાઈન કરેલ', close: 'બંધ કરો' },
-    hi: { overview: 'अवलोकन', karigars: 'कारीगर', tasks: 'कार्य', chat: 'चैट', total_karigars: 'कुल कारीगर', total_tasks: 'कुल कार्य', in_progress: 'प्रगति पर', completed: 'पूर्ण', add_karigar: 'नया कारीगर जोड़ें', add_task: 'नया कार्य असाइन करें', select_karigar: 'कारीगर चुनें', task_title: 'कार्य का शीर्षक', task_desc: 'विवरण', send: 'भेजें', reset_pin: 'PIN रीसेट करें', no_karigar_selected: 'चैट करने के लिए कारीगर चुनें', online: 'ऑनलाइन', loading: 'लोड हो रहा है...', task_details: 'कार्य विवरण', status: 'स्थिति', assigned_to: 'असाइन किया गया', close: 'बंद करें' }
+    en: { 
+      overview: 'Overview', karigars: 'Karigars', tasks: 'Tasks', chat: 'Chat', 
+      total_karigars: 'Total Karigars', total_tasks: 'Total Tasks', 
+      in_progress: 'In Progress', completed: 'Completed', 
+      add_karigar: 'Add New Karigar', add_task: 'Assign New Task', 
+      select_karigar: 'Select a Karigar', task_title: 'Task Title', task_desc: 'Description', 
+      send: 'Send', reset_pin: 'Reset PIN', 
+      no_karigar_selected: 'Select a Karigar to chat', online: 'Online', 
+      loading: 'Loading...', task_details: 'Task Details', status: 'Status', 
+      assigned_to: 'Assigned to', close: 'Close', all_tasks: 'All Tasks',
+      no_karigars: 'No karigars added yet.', no_tasks: 'No tasks created yet.',
+      no_inprogress: 'No tasks in progress.', no_completed: 'No completed tasks.'
+    },
+    gu: { 
+      overview: 'ઝાંખી', karigars: 'કારીગરો', tasks: 'કામો', chat: 'ચેટ', 
+      total_karigars: 'કુલ કારીગરો', total_tasks: 'કુલ કામો', 
+      in_progress: 'ચાલુ કામ', completed: 'પૂર્ણ થયેલ', 
+      add_karigar: 'નવો કારીગર ઉમેરો', add_task: 'નવું કામ અસાઈન કરો', 
+      select_karigar: 'કારીગર પસંદ કરો', task_title: 'કામનું શીર્ષક', task_desc: 'વર્ણન', 
+      send: 'મોકલો', reset_pin: 'PIN રીસેટ કરો', 
+      no_karigar_selected: 'ચેટ કરવા માટે કારીગર પસંદ કરો', online: 'ઑનલાઇન', 
+      loading: 'લોડ થાય છે...', task_details: 'કામની વિગતો', status: 'સ્થિતિ', 
+      assigned_to: 'અસાઈન કરેલ', close: 'બંધ કરો', all_tasks: 'બધા કામો',
+      no_karigars: 'હજુ કોઈ કારીગર ઉમેરાયો નથી.', no_tasks: 'હજુ કોઈ કામ બનાવ્યું નથી.',
+      no_inprogress: 'ચાલુ કામ નથી.', no_completed: 'પૂર્ણ થયેલ કામ નથી.'
+    },
+    hi: { 
+      overview: 'अवलोकन', karigars: 'कारीगर', tasks: 'कार्य', chat: 'चैट', 
+      total_karigars: 'कुल कारीगर', total_tasks: 'कुल कार्य', 
+      in_progress: 'प्रगति पर', completed: 'पूर्ण', 
+      add_karigar: 'नया कारीगर जोड़ें', add_task: 'नया कार्य असाइन करें', 
+      select_karigar: 'कारीगर चुनें', task_title: 'कार्य का शीर्षक', task_desc: 'विवरण', 
+      send: 'भेजें', reset_pin: 'PIN रीसेट करें', 
+      no_karigar_selected: 'चैट करने के लिए कारीगर चुनें', online: 'ऑनलाइन', 
+      loading: 'लोड हो रहा है...', task_details: 'कार्य विवरण', status: 'स्थिति', 
+      assigned_to: 'असाइन किया गया', close: 'बंद करें', all_tasks: 'सभी कार्य',
+      no_karigars: 'अभी कोई कारीगर नहीं जोड़ा गया।', no_tasks: 'अभी कोई कार्य नहीं बनाया गया।',
+      no_inprogress: 'प्रगति पर कोई कार्य नहीं।', no_completed: 'कोई पूर्ण कार्य नहीं।'
+    }
   };
 
   if (loading) return (
@@ -219,6 +258,10 @@ export default function OwnerDashboard() {
     return <OnboardingWizard userId={ownerData.id} onComplete={() => setIsOnboarding(false)} />;
   }
 
+  // Filter tasks based on tab
+  const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
+  const completedTasks = tasks.filter(t => t.status === 'Completed');
+
   return (
     <div className="min-h-screen bg-[#04080F] text-white p-6 relative overflow-hidden">
       <Toaster position="top-right" toastOptions={{ style: { background: '#1a2333', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } }} />
@@ -226,6 +269,7 @@ export default function OwnerDashboard() {
       <div className="fixed top-1/2 left-0 w-[300px] h-[300px] bg-purple-600/20 rounded-full blur-[100px] z-0"></div>
 
       <div className="relative z-10 max-w-6xl mx-auto space-y-8">
+        
         {/* Header */}
         <div className="flex justify-between items-center glass-panel-deep p-4 rounded-2xl border border-purple-500/20 transition-all hover:border-purple-400/40">
           <div className="flex items-center gap-3">
@@ -242,7 +286,7 @@ export default function OwnerDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-4">
           <div className="glass-panel p-4 rounded-xl border border-white/5 hover:border-purple-500/40 transition-all hover:-translate-y-1">
              <div className="text-[10px] text-slate-400 flex items-center gap-1"><Users className="w-3 h-3" /> {t[lang].total_karigars}</div>
@@ -254,121 +298,225 @@ export default function OwnerDashboard() {
           </div>
           <div className="glass-panel p-4 rounded-xl border border-white/5 hover:border-orange-500/40 transition-all hover:-translate-y-1">
              <div className="text-[10px] text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" /> {t[lang].in_progress}</div>
-             <div className="text-2xl font-bold text-orange-400">{tasks.filter(t => t.status === 'In Progress').length}</div>
+             <div className="text-2xl font-bold text-orange-400">{inProgressTasks.length}</div>
           </div>
           <div className="glass-panel p-4 rounded-xl border border-white/5 hover:border-green-500/40 transition-all hover:-translate-y-1">
              <div className="text-[10px] text-slate-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t[lang].completed}</div>
-             <div className="text-2xl font-bold text-green-400">{tasks.filter(t => t.status === 'Completed').length}</div>
+             <div className="text-2xl font-bold text-green-400">{completedTasks.length}</div>
           </div>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-             {/* Karigars List */}
-             <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl hover:shadow-purple-900/20 transition-all">
-                <div className="flex justify-between items-center mb-4">
-                   <h3 className="text-sm font-bold text-purple-300 flex items-center gap-2"><Users className="w-4 h-4" /> {t[lang].karigars}</h3>
-                   <button onClick={() => setShowAddKarigar(true)} className="bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold border border-purple-500/20 transition flex items-center gap-1 hover:scale-105">
-                      <UserPlus className="w-3 h-3" /> {t[lang].add_karigar}
-                   </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {karigars.map(k => (
-                    <div 
-                      key={k.id} 
-                      onClick={() => setChattingWith(k.id)}
-                      className={`glass-panel px-3 py-2 rounded-xl border border-white/5 hover:border-purple-400/50 transition-all cursor-pointer flex items-center gap-2 ${chattingWith === k.id ? 'border-purple-400 bg-purple-500/10 shadow-lg shadow-purple-900/20' : ''} hover:scale-105`}
-                    >
-                       <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold">{k.name.charAt(0)}</div>
-                       <span className="text-xs font-medium truncate max-w-[80px]">{k.name}</span>
-                       <button onClick={(e) => { e.stopPropagation(); resetKarigarPin(k.id, k.name); }} className="text-slate-500 hover:text-yellow-400 transition" title={t[lang].reset_pin}><RefreshCw className="w-3 h-3" /></button>
-                    </div>
-                  ))}
-                  {karigars.length === 0 && <p className="text-sm text-slate-500 w-full text-center py-4">No karigars added yet.</p>}
-                </div>
-             </div>
+        {/* Tab Navigation */}
+        <div className="glass-panel-deep p-2 rounded-2xl border border-white/10 shadow-xl flex flex-wrap gap-2">
+          <button 
+            onClick={() => setActiveTab('karigars')}
+            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'karigars' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <Users className="w-4 h-4 inline mr-1" /> {t[lang].karigars} ({karigars.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('all')}
+            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'all' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <LayoutGrid className="w-4 h-4 inline mr-1" /> {t[lang].all_tasks} ({tasks.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('inprogress')}
+            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'inprogress' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <Clock className="w-4 h-4 inline mr-1" /> {t[lang].in_progress} ({inProgressTasks.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('completed')}
+            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'completed' ? 'bg-green-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <CheckCircle className="w-4 h-4 inline mr-1" /> {t[lang].completed} ({completedTasks.length})
+          </button>
+        </div>
 
-             {/* Tasks List */}
-             <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl hover:shadow-cyan-900/20 transition-all">
-                <div className="flex justify-between items-center mb-4">
-                   <h3 className="text-sm font-bold text-cyan-300 flex items-center gap-2"><Briefcase className="w-4 h-4" /> {t[lang].tasks}</h3>
-                   <button onClick={() => setShowAddTask(true)} className="bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold border border-cyan-500/20 transition flex items-center gap-1 hover:scale-105">
-                      <Plus className="w-3 h-3" /> {t[lang].add_task}
-                   </button>
+        {/* List Display Area */}
+        <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl min-h-[300px]">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold text-white">
+              {activeTab === 'karigars' ? t[lang].karigars : 
+               activeTab === 'all' ? t[lang].all_tasks :
+               activeTab === 'inprogress' ? t[lang].in_progress : t[lang].completed}
+            </h3>
+            {activeTab === 'karigars' && (
+              <button onClick={() => setShowAddKarigar(true)} className="bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold border border-purple-500/20 transition flex items-center gap-1 hover:scale-105">
+                <UserPlus className="w-3 h-3" /> {t[lang].add_karigar}
+              </button>
+            )}
+            {activeTab === 'all' && (
+              <button onClick={() => setShowAddTask(true)} className="bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold border border-cyan-500/20 transition flex items-center gap-1 hover:scale-105">
+                <Plus className="w-3 h-3" /> {t[lang].add_task}
+              </button>
+            )}
+          </div>
+
+          {/* Render list based on active tab */}
+          {activeTab === 'karigars' ? (
+            <div className="flex flex-wrap gap-2">
+              {karigars.map(k => (
+                <div 
+                  key={k.id} 
+                  onClick={() => setChattingWith(k.id)}
+                  className={`glass-panel px-3 py-2 rounded-xl border border-white/5 hover:border-purple-400/50 transition-all cursor-pointer flex items-center gap-2 ${chattingWith === k.id ? 'border-purple-400 bg-purple-500/10 shadow-lg shadow-purple-900/20' : ''} hover:scale-105`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold">{k.name.charAt(0)}</div>
+                  <span className="text-xs font-medium truncate max-w-[80px]">{k.name}</span>
+                  <button onClick={(e) => { e.stopPropagation(); resetKarigarPin(k.id, k.name); }} className="text-slate-500 hover:text-yellow-400 transition" title={t[lang].reset_pin}><RefreshCw className="w-3 h-3" /></button>
                 </div>
-                <div className="space-y-3 max-h-64 overflow-y-auto hide-scrollbar pr-1">
-                  {tasks.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No tasks created yet.</p>}
-                  {tasks.map(task => {
+              ))}
+              {karigars.length === 0 && <p className="text-sm text-slate-500 w-full text-center py-4">{t[lang].no_karigars}</p>}
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto hide-scrollbar pr-1">
+              {(() => {
+                let displayTasks = tasks;
+                if (activeTab === 'inprogress') displayTasks = inProgressTasks;
+                if (activeTab === 'completed') displayTasks = completedTasks;
+                return displayTasks.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">
+                    {activeTab === 'all' ? t[lang].no_tasks : 
+                     activeTab === 'inprogress' ? t[lang].no_inprogress : t[lang].no_completed}
+                  </p>
+                ) : (
+                  displayTasks.map(task => {
                     const karigar = karigars.find(k => k.id === task.karigar_id);
                     const statusColor = task.status === 'Completed' ? 'green' : task.status === 'In Progress' ? 'orange' : 'slate';
                     return (
                       <div 
                         key={task.id} 
                         onClick={() => setSelectedTask(task)}
-                        className="glass-panel p-3 rounded-xl border border-white/5 hover:border-cyan-400/30 transition-all cursor-pointer hover:bg-white/5"
+                        className="glass-panel p-3 rounded-xl border border-white/5 hover:border-cyan-400/30 transition-all cursor-pointer hover:bg-white/5 flex justify-between items-center"
                       >
-                         <div className="flex justify-between items-center">
-                            <div>
-                               <div className="text-sm font-semibold">{task.title}</div>
-                               <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
-                                  <span>Assigned to: <span className="text-purple-300">{karigar?.name || 'Unknown'}</span></span>
-                                  <span className={`w-1 h-1 rounded-full bg-${statusColor}-400`}></span>
-                                  <span className={`text-${statusColor}-300`}>{task.status}</span>
-                               </div>
-                            </div>
-                            <div className="text-[10px] text-slate-600 flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(task.created_at).toLocaleDateString()}</div>
-                         </div>
+                        <div>
+                          <div className="text-sm font-semibold">{task.title}</div>
+                          <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span>Assigned to: <span className="text-purple-300">{karigar?.name || 'Unknown'}</span></span>
+                            <span className={`w-1 h-1 rounded-full bg-${statusColor}-400`}></span>
+                            <span className={`text-${statusColor}-300`}>{task.status}</span>
+                            <span className="text-slate-600 text-[8px]"><Calendar className="w-3 h-3 inline" /> {new Date(task.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
                       </div>
                     );
-                  })}
-                </div>
-             </div>
+                  })
+                );
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Chat Area */}
+        <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col h-[400px]">
+          <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
+            <h3 className="text-sm font-bold text-purple-300 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> {t[lang].chat}</h3>
+            {chattingWith && <span className="bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full text-[8px] border border-green-500/20">{t[lang].online}</span>}
           </div>
-
-          {/* Chat Area */}
-          <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col h-[500px] hover:shadow-purple-900/20 transition-all">
-             <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
-                <h3 className="text-sm font-bold text-purple-300 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> {t[lang].chat}</h3>
-                {chattingWith && <span className="bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full text-[8px] border border-green-500/20">{t[lang].online}</span>}
-             </div>
-             <div className="flex-1 overflow-y-auto text-xs text-slate-400 space-y-2 pr-1 mb-3 hide-scrollbar">
-                {!chattingWith && <p className="text-slate-600 text-center py-10">{t[lang].no_karigar_selected}</p>}
-                {messages.map((msg, idx) => (
-                  <div key={idx} className={`flex flex-col ${msg.sender_id === ownerData?.id ? 'items-end' : 'items-start'}`}>
-                     <div className={`glass-panel p-2 rounded-xl max-w-[80%] ${msg.sender_id === ownerData?.id ? 'bg-purple-600/20 border-purple-500/30' : 'bg-cyan-600/20 border-cyan-500/30'}`}>
-                        <div className={msg.sender_id === ownerData?.id ? 'text-cyan-300' : 'text-purple-300'}>
-                           <span className="font-bold">{msg.sender_id === ownerData?.id ? 'You' : 'Karigar'}:</span> {msg.content}
-                        </div>
-                     </div>
-                     <span className="text-[8px] text-slate-600 mt-1">{new Date(msg.created_at).toLocaleTimeString()}</span>
+          <div className="flex-1 overflow-y-auto text-xs text-slate-400 space-y-2 pr-1 mb-3 hide-scrollbar">
+            {!chattingWith && <p className="text-slate-600 text-center py-10">{t[lang].no_karigar_selected}</p>}
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex flex-col ${msg.sender_id === ownerData?.id ? 'items-end' : 'items-start'}`}>
+                <div className={`glass-panel p-2 rounded-xl max-w-[80%] ${msg.sender_id === ownerData?.id ? 'bg-purple-600/20 border-purple-500/30' : 'bg-cyan-600/20 border-cyan-500/30'}`}>
+                  <div className={msg.sender_id === ownerData?.id ? 'text-cyan-300' : 'text-purple-300'}>
+                    <span className="font-bold">{msg.sender_id === ownerData?.id ? 'You' : 'Karigar'}:</span> {msg.content}
                   </div>
-                ))}
-             </div>
-
-             <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  disabled={!chattingWith}
-                  placeholder={chattingWith ? "Type a message..." : "Select a Karigar first"}
-                  className="flex-1 bg-[#0A1025] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-purple-500 transition placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed" 
-                />
-                <button 
-                  onClick={sendMessage} 
-                  disabled={chatLoading || !newMessage.trim() || !chattingWith}
-                  className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm transition shadow-lg shadow-purple-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 hover:scale-105"
-                >
-                  {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  {t[lang].send}
-                </button>
-             </div>
+                </div>
+                <span className="text-[8px] text-slate-600 mt-1">{new Date(msg.created_at).toLocaleTimeString()}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+              disabled={!chattingWith}
+              placeholder={chattingWith ? "Type a message..." : "Select a Karigar first"}
+              className="flex-1 bg-[#0A1025] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-purple-500 transition placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed" 
+            />
+            <button 
+              onClick={sendMessage} 
+              disabled={chatLoading || !newMessage.trim() || !chattingWith}
+              className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm transition shadow-lg shadow-purple-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 hover:scale-105"
+            >
+              {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {t[lang].send}
+            </button>
           </div>
         </div>
 
       </div>
+
+      {/* Task Details Modal with Proof URL */}
+      {selectedTask && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+          <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
+             <button onClick={() => setSelectedTask(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
+             <h3 className="text-xl font-bold mb-4 text-white">{t[lang].task_details}</h3>
+             <div className="space-y-3">
+                <div><span className="text-sm text-slate-400">Title:</span> <p className="text-lg font-semibold">{selectedTask.title}</p></div>
+                <div><span className="text-sm text-slate-400">{t[lang].task_desc}:</span> <p className="text-sm text-slate-300">{selectedTask.description || 'No description'}</p></div>
+                <div><span className="text-sm text-slate-400">{t[lang].assigned_to}:</span> <p className="text-sm text-purple-300">{karigars.find(k => k.id === selectedTask.karigar_id)?.name || 'Unknown'}</p></div>
+                <div><span className="text-sm text-slate-400">{t[lang].status}:</span> <span className={`text-sm font-medium px-2 py-1 rounded-full bg-${selectedTask.status === 'Completed' ? 'green' : selectedTask.status === 'In Progress' ? 'orange' : 'slate'}-500/20 text-${selectedTask.status === 'Completed' ? 'green' : selectedTask.status === 'In Progress' ? 'orange' : 'slate'}-300`}>{selectedTask.status}</span></div>
+                {selectedTask.proof_url && (
+                  <div>
+                    <span className="text-sm text-slate-400">Proof:</span>
+                    <div className="mt-2">
+                      <a href={selectedTask.proof_url} target="_blank" rel="noopener noreferrer" className="inline-block text-cyan-400 hover:underline text-sm">📎 View Uploaded Proof</a>
+                      <img src={selectedTask.proof_url} alt="Uploaded Proof" className="mt-2 max-h-40 rounded-lg border border-white/10 object-contain" />
+                    </div>
+                  </div>
+                )}
+             </div>
+             <div className="mt-6 flex justify-end">
+                <button onClick={() => setSelectedTask(null)} className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-sm text-white transition">{t[lang].close}</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Karigar Modal */}
+      {showAddKarigar && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+          <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
+             <button onClick={() => setShowAddKarigar(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
+             <h3 className="text-xl font-bold mb-4 text-white">{t[lang].add_karigar}</h3>
+             <input type="text" value={newKarigarName} onChange={(e) => setNewKarigarName(e.target.value)} placeholder="Karigar Name" className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-purple-500 transition mb-4" />
+             <div className="flex gap-3">
+                <button onClick={() => setShowAddKarigar(false)} className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl text-sm text-white transition">Cancel</button>
+                <button onClick={addKarigar} disabled={addingKarigar} className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-900/30 transition disabled:opacity-70 flex items-center justify-center gap-2 hover:scale-105">
+                   {addingKarigar ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Karigar'}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showAddTask && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+          <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
+             <button onClick={() => setShowAddTask(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
+             <h3 className="text-xl font-bold mb-4 text-white">{t[lang].add_task}</h3>
+             <select value={selectedKarigarForTask} onChange={(e) => setSelectedKarigarForTask(e.target.value)} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-3">
+                <option value="">{t[lang].select_karigar}</option>
+                {karigars.map(k => <option key={k.id} value={k.id}>{k.name} ({k.id})</option>)}
+             </select>
+             <input type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder={t[lang].task_title} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-3" />
+             <textarea value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} placeholder={t[lang].task_desc} rows={3} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-4 resize-none"></textarea>
+             <div className="flex gap-3">
+                <button onClick={() => setShowAddTask(false)} className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl text-sm text-white transition">Cancel</button>
+                <button onClick={addTask} disabled={addingTask} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-cyan-900/30 transition disabled:opacity-70 flex items-center justify-center gap-2 hover:scale-105">
+                   {addingTask ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Task'}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
