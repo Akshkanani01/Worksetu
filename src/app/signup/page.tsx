@@ -71,14 +71,12 @@ export default function SignUpPage() {
 
       if (dbError) {
         console.error('Failed to create owner profile:', dbError);
-        // આપણે યુઝરને લૉગિન કરાવી શકીએ છીએ, પણ તેનો પ્રોફાઈલ ટેબલ ન હોઈ શકે.
-        // સરળતા માટે, આપણે એરર બતાવીશું.
         setMessage({ type: 'error', text: 'Failed to initialize workshop. Please contact support.' });
         setIsLoading(false);
         return;
       }
 
-      // 3. સફળતા! ઓનર ડેશબોર્ડ પર રીડાયરેક્ટ કરો (અને Onboarding ઓટોમેટિક ખુલશે)
+      // 3. સફળતા! સીધા ઓનર ડેશબોર્ડ પર રીડાયરેક્ટ કરો (ઈમેલ વેરિફિકેશન ઓફ છે)
       setMessage({ type: 'success', text: 'Account created successfully! Redirecting...' });
       setTimeout(() => {
         router.push('/dashboard/owner');
@@ -142,7 +140,7 @@ export default function SignUpPage() {
               <input 
                 type="text" 
                 required 
-                placeholder="Your Business Name" 
+                placeholder="Rajesh Diamond Works" 
                 value={businessName} 
                 onChange={(e) => setBusinessName(e.target.value)}
                 className="w-full bg-[#0A1025] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-purple-500 transition placeholder:text-slate-600"
