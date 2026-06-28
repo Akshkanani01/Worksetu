@@ -1,24 +1,45 @@
+import { createServerClientWithCookies } from '@/lib/supabase.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
+  const supabase = await createServerClientWithCookies();
   const path = request.nextUrl.pathname;
-  const sessionCookie = request.cookies.get('worksetu_session');
 
-  // === 1. Public paths (બધાને પરવાનગી) ===
+  // === 1. Public routes ===
   if (path === '/' || path === '/login' || path.startsWith('/api/')) {
     return NextResponse.next({ request });
   }
 
-  // === 2. Karigar Dashboard (કૂકી હોય તો જ) ===
-  if (path === '/dashboard/karigar') {
-    if (sessionCookie) {
-      return NextResponse.next({ request });
+  // === 2. Owner Dashboard: Supabase session check ===
+  if (path === '/dashboard/owner') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.next({ request });
   }
 
-  // === 3. Owner Dashboard: હવે કોઈ ચેક નથી (ક્લાયન્ટ સાઈડ ચેક કરશે) ===
-  // બધા અન્ય રૂટ્સ (જેમ કે /dashboard/owner) ને મંજૂરી આપો
+  // === 3. Karigar Dashboard: custom cookie check ===
+  if (path === '/dashboard/karigar') {
+    const karigarSession = request.cookies.get('worksetu_session');
+    if (!karigarSession) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return NextResponse.next({ request });
+  }
+
+  // === 4. Login page: if already logged in, redirect ===
+  if (path === '/login') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      return NextResponse.redirect(new URL('/dashboard/owner', request.url));
+    }
+    const karigarSession = request.cookies.get('worksetu_session');
+    if (karigarSession) {
+      return NextResponse.redirect(new URL('/dashboard/karigar', request.url));
+    }
+  }
+
   return NextResponse.next({ request });
 }
 
