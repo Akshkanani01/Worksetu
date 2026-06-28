@@ -1,7 +1,7 @@
 import { createServerClientWithCookies } from '@/lib/supabase.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const supabase = await createServerClientWithCookies();
   const path = request.nextUrl.pathname;
@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // === 2. Karigar Dashboard (ફક્ત કારીગર સેશન હોય તો જ) ===
+  // === 2. Karigar Dashboard ===
   if (path === '/dashboard/karigar') {
     const karigarSession = request.cookies.get('worksetu_session');
     if (!karigarSession) {
@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // === 3. Owner Dashboard (હંમેશા પસાર થવા દો; ક્લાયન્ટ સાઈડ લૉગિન ચેક કરશે) ===
+  // === 3. Owner Dashboard ===
   if (path === '/dashboard/owner') {
     return supabaseResponse;
   }
