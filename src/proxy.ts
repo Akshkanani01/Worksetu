@@ -20,9 +20,18 @@ export async function proxy(request: NextRequest) {
   }
 
   // === 3. Owner Dashboard ===
-  if (path === '/dashboard/owner') {
-    return supabaseResponse;
+  // ... બાકીનો કોડ ...
+
+if (path === '/dashboard/owner') {
+  const sessionCookie = request.cookies.get('worksetu_session');
+  const session = sessionCookie ? JSON.parse(sessionCookie.value) : null;
+  if (!session || session.role !== 'owner') {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
+  return supabaseResponse;
+}
+
+// ... બાકીનો કોડ ...
 
   // === 4. Login page: જો પહેલેથી લૉગિન હોય તો ડેશબોર્ડ પર મોકલો ===
   if (path === '/login') {
