@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+// Resend ક્લાયન્ટ
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
 export async function POST(req: NextRequest) {
@@ -14,13 +15,13 @@ export async function POST(req: NextRequest) {
     // 1. 6-અંકનો OTP જનરેટ કરો
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // 2. Magic Link URL બનાવો
+    // 2. લાઈવ URL નો ઉપયોગ કરીને મેજિક લિંક
     const magicLinkUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-otp?email=${encodeURIComponent(email)}&otp=${otp}`;
 
-    // 3. Resend વડે ઈમેલ મોકલો (ફ્રી ટાયરમાં ફક્ત તમારો જ ઈમેલ ચાલશે)
+    // 3. Resend વડે ઈમેલ મોકલો
     const { data, error } = await resend.emails.send({
-      from: 'WorkSetu <onboarding@resend.dev>',
-      to: [email], // ⚠️ ટેસ્ટ સમયે ફક્ત તમારો ઈમેલ જ નાખો
+      from: 'WorkSetu <onboarding@resend.dev>', // ફ્રી ટાયર માટે આ ઈમેલ ફરજિયાત છે
+      to: [email], // ⚠️ ટેસ્ટ માટે ફક્ત તમારો જ ઈમેલ (manishakanani956@gmail.com) નાખો
       subject: '🔐 Your WorkSetu Magic Link',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #0B1120; color: white; border-radius: 12px; border: 1px solid #333;">
