@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get('email');
   const otp = searchParams.get('otp');
 
-  if (!email || !otp) return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
+  if (!email || !otp) {
+    return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
+  }
 
   const { data, error } = await supabase
     .from('otps')
@@ -23,7 +25,9 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .single();
 
-  if (error || !data) return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
+  if (error || !data) {
+    return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
+  }
 
   await supabase.from('otps').delete().eq('id', data.id);
 
@@ -35,8 +39,8 @@ export async function GET(req: NextRequest) {
     businessName: ''
   }), {
     httpOnly: false,
-    secure: true,
-    sameSite: 'none',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   });
