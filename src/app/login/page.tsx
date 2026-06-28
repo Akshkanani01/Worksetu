@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // <--- Sign up માટે Link ઉમેર્યું
 import { Mail, User, Lock, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase.client';
 
@@ -151,9 +152,6 @@ export default function LoginPage() {
                   className="w-full bg-[#0A1025] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-purple-500 transition placeholder:text-slate-600"
                 />
               </div>
-              <div className="text-[10px] text-slate-500 mt-2">
-                <span className="text-purple-400 cursor-pointer hover:underline">Forgot password?</span>
-              </div>
             </div>
 
             <button 
@@ -163,9 +161,14 @@ export default function LoginPage() {
             >
               {isLoading ? 'Logging in...' : 'Login'} <ArrowRight className="w-4 h-4" />
             </button>
-            
+            <div className="text-[10px] text-slate-500 mt-2 flex justify-end">
+  <Link href="/forgot-password" className="text-purple-400 hover:underline cursor-pointer">
+    Forgot password?
+  </Link>
+</div>
+            {/* === હવે અહીં Sign Up લિંક ઉમેરેલી છે === */}
             <div className="text-center text-xs text-slate-500 mt-2">
-              Don't have an account? <span className="text-purple-400 hover:underline cursor-pointer">Sign up</span>
+              Don't have an account? <Link href="/signup" className="text-purple-400 hover:underline cursor-pointer">Sign up</Link>
             </div>
           </form>
         )}
