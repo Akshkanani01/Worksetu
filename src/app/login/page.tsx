@@ -10,11 +10,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'owner' | 'karigar'>('owner');
   
-  // Owner Email & Password State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // Karigar State
   const [karigarId, setKarigarId] = useState('');
   const [pin, setPin] = useState(['', '', '', '']);
   
@@ -23,34 +21,44 @@ export default function LoginPage() {
   
   const supabase = createClient();
 
-  // ===== Owner: Email & Password Login =====
+  // ===== Owner: Email & Password Login (FIXED REDIRECT) =====
   const handleOwnerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage(null);
 
     try {
+      console.log("🟢 Attempting owner login...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error("❌ Login error:", error);
         setMessage({ type: 'error', text: error.message });
         setIsLoading(false);
         return;
       }
 
       if (data.session) {
-        router.push('/dashboard/owner');
+        console.log("✅ Session found. Redirecting...");
+        // 500ms રાહ જુઓ જેથી બ્રાઉઝર કૂકી સેટ કરી શકે, પછી સંપૂર્ણ પેજ રીડાયરેક્ટ કરો
+        setTimeout(() => {
+          window.location.href = '/dashboard/owner';
+        }, 500);
+      } else {
+        setMessage({ type: 'error', text: 'No session returned. Please try again.' });
+        setIsLoading(false);
       }
     } catch (err) {
-      setMessage({ type: 'error', text: 'Something went wrong. Try again.' });
+      console.error("🔥 Unexpected error:", err);
+      setMessage({ type: 'error', text: 'Something went wrong. Please try again.' });
       setIsLoading(false);
     }
   };
 
-  // ===== Karigar: PIN Login =====
+  // ===== Karigar: PIN Login (UNCHANGED) =====
   const handleKarigarLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -121,7 +129,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Owner Form (Email + Password) */}
+        {/* Owner Form */}
         {activeTab === 'owner' && (
           <form onSubmit={handleOwnerLogin} className="space-y-6">
             <div>
@@ -174,7 +182,7 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* Karigar Form (Unchanged) */}
+        {/* Karigar Form */}
         {activeTab === 'karigar' && (
           <form onSubmit={handleKarigarLogin} className="space-y-6">
             <div>
@@ -215,7 +223,6 @@ export default function LoginPage() {
                   />
                 ))}
               </div>
-              <p className="text-[10px] text-slate-500 mt-2">Enter the 4-digit PIN provided by your Owner.</p>
             </div>
 
             <button 

@@ -19,19 +19,16 @@ export default function OwnerDashboard() {
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [ownerProfile, setOwnerProfile] = useState<any>(null);
   
-  // Data States
   const [ownerData, setOwnerData] = useState<{id: string, name: string, businessName: string} | null>(null);
   const [karigars, setKarigars] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   
-  // Chat Selection
   const [chattingWith, setChattingWith] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
 
-  // Modals & Forms
   const [showAddKarigar, setShowAddKarigar] = useState(false);
   const [newKarigarName, setNewKarigarName] = useState('');
   const [addingKarigar, setAddingKarigar] = useState(false);
@@ -44,23 +41,22 @@ export default function OwnerDashboard() {
 
   const supabase = createClient();
 
-  // === 1. Owner Session Fetch (Using Supabase Auth - No Custom Cookie) ===
+  // === 1. Owner Session Fetch (Real Supabase Auth Only) ===
   useEffect(() => {
-    const getSession = async () => {
+    const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/login');
         return;
       }
 
-      // Set basic Owner data
       setOwnerData({ 
         id: session.user.id, 
         name: session.user.email || 'Owner', 
         businessName: '' 
       });
 
-      // Check Database for Onboarding status
+      // Check Onboarding
       const { data: profile, error } = await supabase
         .from('owners')
         .select('*')
@@ -76,7 +72,7 @@ export default function OwnerDashboard() {
       }
       setLoading(false);
     };
-    getSession();
+    checkSession();
   }, [router, supabase]);
 
   // === 2. Fetch Data & Realtime ===
@@ -206,7 +202,7 @@ export default function OwnerDashboard() {
     router.push('/login'); 
   };
 
-  // === 5. Translation Data ===
+  // === 5. Translation ===
   const t = {
     en: { overview: 'Overview', karigars: 'Karigars', tasks: 'Tasks', chat: 'Chat', total_karigars: 'Total Karigars', total_tasks: 'Total Tasks', in_progress: 'In Progress', completed: 'Completed', add_karigar: 'Add New Karigar', add_task: 'Assign New Task', select_karigar: 'Select a Karigar', task_title: 'Task Title', task_desc: 'Description', send: 'Send', reset_pin: 'Reset PIN', no_karigar_selected: 'Select a Karigar to chat', online: 'Online', loading: 'Loading...', task_details: 'Task Details', status: 'Status', assigned_to: 'Assigned to', close: 'Close' },
     gu: { overview: 'ઝાંખી', karigars: 'કારીગરો', tasks: 'કામો', chat: 'ચેટ', total_karigars: 'કુલ કારીગરો', total_tasks: 'કુલ કામો', in_progress: 'ચાલુ કામ', completed: 'પૂર્ણ થયેલ', add_karigar: 'નવો કારીગર ઉમેરો', add_task: 'નવું કામ અસાઈન કરો', select_karigar: 'કારીગર પસંદ કરો', task_title: 'કામનું શીર્ષક', task_desc: 'વર્ણન', send: 'મોકલો', reset_pin: 'PIN રીસેટ કરો', no_karigar_selected: 'ચેટ કરવા માટે કારીગર પસંદ કરો', online: 'ઑનલાઇન', loading: 'લોડ થાય છે...', task_details: 'કામની વિગતો', status: 'સ્થિતિ', assigned_to: 'અસાઈન કરેલ', close: 'બંધ કરો' },
@@ -219,12 +215,10 @@ export default function OwnerDashboard() {
     </div>
   );
 
-  // જો Onboarding હોય તો Onboarding Wizard બતાવો
   if (isOnboarding && ownerData) {
     return <OnboardingWizard userId={ownerData.id} onComplete={() => setIsOnboarding(false)} />;
   }
 
-  // નહીંતર રીઅલ ડેશબોર્ડ બતાવો
   return (
     <div className="min-h-screen bg-[#04080F] text-white p-6 relative overflow-hidden">
       <Toaster position="top-right" toastOptions={{ style: { background: '#1a2333', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } }} />
@@ -232,7 +226,6 @@ export default function OwnerDashboard() {
       <div className="fixed top-1/2 left-0 w-[300px] h-[300px] bg-purple-600/20 rounded-full blur-[100px] z-0"></div>
 
       <div className="relative z-10 max-w-6xl mx-auto space-y-8">
-        
         {/* Header */}
         <div className="flex justify-between items-center glass-panel-deep p-4 rounded-2xl border border-purple-500/20 transition-all hover:border-purple-400/40">
           <div className="flex items-center gap-3">
@@ -271,10 +264,7 @@ export default function OwnerDashboard() {
 
         {/* Main Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          
-          {/* Left & Center: Karigars & Tasks (col-span-2) */}
           <div className="lg:col-span-2 space-y-6">
-             
              {/* Karigars List */}
              <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl hover:shadow-purple-900/20 transition-all">
                 <div className="flex justify-between items-center mb-4">
@@ -283,7 +273,6 @@ export default function OwnerDashboard() {
                       <UserPlus className="w-3 h-3" /> {t[lang].add_karigar}
                    </button>
                 </div>
-                
                 <div className="flex flex-wrap gap-2">
                   {karigars.map(k => (
                     <div 
@@ -308,7 +297,6 @@ export default function OwnerDashboard() {
                       <Plus className="w-3 h-3" /> {t[lang].add_task}
                    </button>
                 </div>
-                
                 <div className="space-y-3 max-h-64 overflow-y-auto hide-scrollbar pr-1">
                   {tasks.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No tasks created yet.</p>}
                   {tasks.map(task => {
@@ -338,13 +326,12 @@ export default function OwnerDashboard() {
              </div>
           </div>
 
-          {/* Right: Chat Area (col-span-1) */}
+          {/* Chat Area */}
           <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col h-[500px] hover:shadow-purple-900/20 transition-all">
              <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
                 <h3 className="text-sm font-bold text-purple-300 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> {t[lang].chat}</h3>
                 {chattingWith && <span className="bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full text-[8px] border border-green-500/20">{t[lang].online}</span>}
              </div>
-             
              <div className="flex-1 overflow-y-auto text-xs text-slate-400 space-y-2 pr-1 mb-3 hide-scrollbar">
                 {!chattingWith && <p className="text-slate-600 text-center py-10">{t[lang].no_karigar_selected}</p>}
                 {messages.map((msg, idx) => (
@@ -382,73 +369,6 @@ export default function OwnerDashboard() {
         </div>
 
       </div>
-
-      {/* Task Details Modal */}
-      {selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
-          <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
-             <button onClick={() => setSelectedTask(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
-             <h3 className="text-xl font-bold mb-4 text-white">{t[lang].task_details}</h3>
-             <div className="space-y-3">
-                <div><span className="text-sm text-slate-400">Title:</span> <p className="text-lg font-semibold">{selectedTask.title}</p></div>
-                <div><span className="text-sm text-slate-400">{t[lang].task_desc}:</span> <p className="text-sm text-slate-300">{selectedTask.description || 'No description'}</p></div>
-                <div><span className="text-sm text-slate-400">{t[lang].assigned_to}:</span> <p className="text-sm text-purple-300">{karigars.find(k => k.id === selectedTask.karigar_id)?.name || 'Unknown'}</p></div>
-                <div><span className="text-sm text-slate-400">{t[lang].status}:</span> <span className={`text-sm font-medium px-2 py-1 rounded-full bg-${selectedTask.status === 'Completed' ? 'green' : selectedTask.status === 'In Progress' ? 'orange' : 'slate'}-500/20 text-${selectedTask.status === 'Completed' ? 'green' : selectedTask.status === 'In Progress' ? 'orange' : 'slate'}-300`}>{selectedTask.status}</span></div>
-                {selectedTask.proof_url && (
-                  <div>
-                    <span className="text-sm text-slate-400">Proof:</span>
-                    <div className="mt-2">
-                      <a href={selectedTask.proof_url} target="_blank" rel="noopener noreferrer" className="inline-block text-cyan-400 hover:underline text-sm">📎 View Uploaded Proof</a>
-                      <img src={selectedTask.proof_url} alt="Uploaded Proof" className="mt-2 max-h-40 rounded-lg border border-white/10 object-contain" />
-                    </div>
-                  </div>
-                )}
-             </div>
-             <div className="mt-6 flex justify-end">
-                <button onClick={() => setSelectedTask(null)} className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-sm text-white transition">{t[lang].close}</button>
-             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Karigar Modal */}
-      {showAddKarigar && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
-          <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
-             <button onClick={() => setShowAddKarigar(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
-             <h3 className="text-xl font-bold mb-4 text-white">{t[lang].add_karigar}</h3>
-             <input type="text" value={newKarigarName} onChange={(e) => setNewKarigarName(e.target.value)} placeholder="Karigar Name" className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-purple-500 transition mb-4" />
-             <div className="flex gap-3">
-                <button onClick={() => setShowAddKarigar(false)} className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl text-sm text-white transition">Cancel</button>
-                <button onClick={addKarigar} disabled={addingKarigar} className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-900/30 transition disabled:opacity-70 flex items-center justify-center gap-2 hover:scale-105">
-                   {addingKarigar ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Karigar'}
-                </button>
-             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Task Modal */}
-      {showAddTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
-          <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
-             <button onClick={() => setShowAddTask(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
-             <h3 className="text-xl font-bold mb-4 text-white">{t[lang].add_task}</h3>
-             <select value={selectedKarigarForTask} onChange={(e) => setSelectedKarigarForTask(e.target.value)} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-3">
-                <option value="">{t[lang].select_karigar}</option>
-                {karigars.map(k => <option key={k.id} value={k.id}>{k.name} ({k.id})</option>)}
-             </select>
-             <input type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder={t[lang].task_title} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-3" />
-             <textarea value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} placeholder={t[lang].task_desc} rows={3} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-4 resize-none"></textarea>
-             <div className="flex gap-3">
-                <button onClick={() => setShowAddTask(false)} className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl text-sm text-white transition">Cancel</button>
-                <button onClick={addTask} disabled={addingTask} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-cyan-900/30 transition disabled:opacity-70 flex items-center justify-center gap-2 hover:scale-105">
-                   {addingTask ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Task'}
-                </button>
-             </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

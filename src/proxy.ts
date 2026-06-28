@@ -10,7 +10,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // === 2. Owner Dashboard: Supabase session check ===
+  // === 2. Owner Dashboard Protection ===
   if (path === '/dashboard/owner') {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -19,7 +19,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // === 3. Karigar Dashboard: custom cookie check ===
+  // === 3. Karigar Dashboard Protection ===
   if (path === '/dashboard/karigar') {
     const karigarSession = request.cookies.get('worksetu_session');
     if (!karigarSession) {
@@ -28,13 +28,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // === 4. Login page: if already logged in, redirect ===
+  // === 4. Login Page Redirect if already logged in ===
   if (path === '/login') {
     const { data: { user } } = await supabase.auth.getUser();
+    const karigarSession = request.cookies.get('worksetu_session');
+    
     if (user) {
       return NextResponse.redirect(new URL('/dashboard/owner', request.url));
     }
-    const karigarSession = request.cookies.get('worksetu_session');
     if (karigarSession) {
       return NextResponse.redirect(new URL('/dashboard/karigar', request.url));
     }
