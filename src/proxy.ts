@@ -6,43 +6,62 @@ export async function proxy(request: NextRequest) {
   const supabase = await createServerClientWithCookies();
   const path = request.nextUrl.pathname;
 
-  // === 1. Public routes (કોઈ ઓથ ચેક નહીં) ===
+  console.log("🛡️ Middleware running for path:", path);
+
+  // === Public routes ===
   if (path === '/' || path === '/login' || path.startsWith('/api/')) {
+    console.log("🟢 Public path allowed:", path);
     return supabaseResponse;
   }
 
-  // === 2. Karigar Dashboard ===
-  if (path === '/dashboard/karigar') {
-    const karigarSession = request.cookies.get('worksetu_session');
-    if (!karigarSession) {
+  // === Read sessions ===
+  const karigarSession = request.cookies.get('worksetu_session');
+  const ownerCookie = request.cookies.get('worksetu_session');
+  
+  console.log("🍪 Cookies in Middleware:", {
+    karigar: karigarSession?.value ? true : false,
+    owner: ownerCookie?.value ? true : false
+  });
+
+  if (ownerCookie) {
+    console.log("📦 Owner cookie value:", ownerCookie.value);
+  }
+
+  // === Owner Dashboard Protection ===
+  if (path === '/dashboard/owner') {
+    let isOwner = false;
+    if (ownerCookie) {
+      try {
+        const session = JSON.parse(ownerCookie.value);
+        console.log("👤 Parsed Owner Session:", session);
+        if (session.role === 'owner') isOwner = true;
+      } catch (e) {
+        console.error("🔴 Error parsing owner cookie:", e);
+      }
+    }
+
+    if (!isOwner) {
+      console.log("🔴 Owner session invalid, redirecting to login.");
       return NextResponse.redirect(new URL('/login', request.url));
     }
+    console.log("🟢 Owner session valid, allowing access.");
+    return supabaseResponse;
   }
 
-  // === 3. Owner Dashboard ===
-  // ... બાકીનો કોડ ...
-
-if (path === '/dashboard/owner') {
-  const sessionCookie = request.cookies.get('worksetu_session');
-  const session = sessionCookie ? JSON.parse(sessionCookie.value) : null;
-  if (!session || session.role !== 'owner') {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-  return supabaseResponse;
-}
-
-// ... બાકીનો કોડ ...
-
-  // === 4. Login page: જો પહેલેથી લૉગિન હોય તો ડેશબોર્ડ પર મોકલો ===
-  if (path === '/login') {
-    const { data: { user } } = await supabase.auth.getUser();
-    const karigarSession = request.cookies.get('worksetu_session');
-    if (user) {
-      return NextResponse.redirect(new URL('/dashboard/owner', request.url));
-    }
+  // === Karigar Dashboard Protection ===
+  if (path === '/dashboard/karigar') {
+    let isKarigar = false;
     if (karigarSession) {
-      return NextResponse.redirect(new URL('/dashboard/karigar', request.url));
+      try {
+        const session = JSON.parse(karigarSession.value);
+        if (session.role === 'karigar') isKarigar = true;
+      } catch (e) {}
     }
+
+    if (!isKarigar) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return supabaseResponse;
   }
 
   return supabaseResponse;

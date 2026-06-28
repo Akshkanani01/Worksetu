@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   CheckCircle2, Clock, ImageIcon, MessageSquare, LogOut, 
   Package, Loader2, Send, Users, Plus, RefreshCw,
-  Briefcase, UserPlus, X, Calendar, LayoutGrid, List
+  Briefcase, UserPlus, X, Calendar, LayoutGrid
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase.client';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -26,9 +26,6 @@ export default function OwnerDashboard() {
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   
-  // Tab State
-  const [activeTab, setActiveTab] = useState<'karigars' | 'all' | 'inprogress' | 'completed'>('karigars');
-
   // Chat Selection
   const [chattingWith, setChattingWith] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -47,41 +44,59 @@ export default function OwnerDashboard() {
 
   const supabase = createClient();
 
-  // === 1. Owner Session Fetch & Onboarding Check ===
+  // === 1. Owner Session Fetch (Full Cookie Check) ===
   useEffect(() => {
-    const load = async () => {
-      let sessionUser: any = null;
+    const checkSession = async () => {
+      // 1. ડીબગ: બ્રાઉઝરની બધી કૂકીઝ ચેક કરો
+      const cookies = document.cookie.split(';').reduce((acc, c) => {
+        const [key, val] = c.trim().split('=');
+        if (key === 'worksetu_session') acc[key] = decodeURIComponent(val);
+        return acc;
+      }, {} as Record<string, string>);
+      
+      console.log("🍪 Client Cookies (at Dashboard Load):", cookies);
 
-      if (process.env.NODE_ENV === 'development') {
-        const dummyId = 'owner_dev_123';
-        setOwnerData({ id: dummyId, name: 'Dev Owner', businessName: 'My Workshop' });
-        sessionUser = { id: dummyId };
-      } else {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { router.push('/login'); return; }
-        setOwnerData({ id: session.user.id, name: session.user.email || 'Owner', businessName: '' });
-        sessionUser = session.user;
-      }
+      // 2. જો કૂકી હોય, તો તેને પાર્સ કરો
+      if (cookies.worksetu_session) {
+        try {
+          const session = JSON.parse(cookies.worksetu_session);
+          console.log("📦 Owner cookie value on client:", session);
 
-      if (sessionUser) {
-        const { data: profile, error } = await supabase
-          .from('owners')
-          .select('*')
-          .eq('id', sessionUser.id)
-          .single();
+          if (session && session.role === 'owner') {
+            setOwnerData({ 
+              id: session.id, 
+              name: session.name, 
+              businessName: session.businessName || '' 
+            });
+            setLoading(false);
+            
+            // 3. ડેટાબેઝમાંથી ઓનર પ્રોફાઈલ ચેક કરો
+            const { data: profile, error } = await supabase
+              .from('owners')
+              .select('*')
+              .eq('id', session.id)
+              .single();
 
-        if (profile && profile.onboarding_completed) {
-          setOwnerProfile(profile);
-          setOwnerData(prev => prev ? { ...prev, businessName: profile.business_name } : null);
-          setIsOnboarding(false);
-        } else {
-          setIsOnboarding(true);
+            if (profile && profile.onboarding_completed) {
+              setOwnerProfile(profile);
+              setOwnerData(prev => prev ? { ...prev, businessName: profile.business_name } : null);
+              setIsOnboarding(false);
+            } else {
+              setIsOnboarding(true);
+            }
+            return;
+          }
+        } catch (e) {
+          console.error("🔴 Error parsing owner cookie:", e);
         }
       }
-      setLoading(false);
+      
+      // 4. જો કૂકી ન મળે, તો લૉગિન પર મોકલો
+      console.log("🔴 Owner session not found. Redirecting to login.");
+      router.push('/login');
     };
-    load();
-  }, [router, supabase, isOnboarding]);
+    checkSession();
+  }, [router, supabase]);
 
   // === 2. Fetch Data & Realtime ===
   const fetchData = async () => {
@@ -205,16 +220,16 @@ export default function OwnerDashboard() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
     document.cookie = "worksetu_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC"; 
+    await supabase.auth.signOut();
     router.push('/login'); 
   };
 
   // === 5. Translation Data ===
   const t = {
-    en: { overview: 'Overview', karigars: 'Karigars', tasks: 'Tasks', chat: 'Chat', total_karigars: 'Total Karigars', total_tasks: 'Total Tasks', in_progress: 'In Progress', completed: 'Completed', add_karigar: 'Add New Karigar', add_task: 'Assign New Task', select_karigar: 'Select a Karigar', task_title: 'Task Title', task_desc: 'Description', send: 'Send', reset_pin: 'Reset PIN', no_karigar_selected: 'Select a Karigar to chat', online: 'Online', loading: 'Loading...', task_details: 'Task Details', status: 'Status', assigned_to: 'Assigned to', close: 'Close', all: 'All Tasks' },
-    gu: { overview: 'ઝાંખી', karigars: 'કારીગરો', tasks: 'કામો', chat: 'ચેટ', total_karigars: 'કુલ કારીગરો', total_tasks: 'કુલ કામો', in_progress: 'ચાલુ કામ', completed: 'પૂર્ણ થયેલ', add_karigar: 'નવો કારીગર ઉમેરો', add_task: 'નવું કામ અસાઈન કરો', select_karigar: 'કારીગર પસંદ કરો', task_title: 'કામનું શીર્ષક', task_desc: 'વર્ણન', send: 'મોકલો', reset_pin: 'PIN રીસેટ કરો', no_karigar_selected: 'ચેટ કરવા માટે કારીગર પસંદ કરો', online: 'ઑનલાઇન', loading: 'લોડ થાય છે...', task_details: 'કામની વિગતો', status: 'સ્થિતિ', assigned_to: 'અસાઈન કરેલ', close: 'બંધ કરો', all: 'બધા કામો' },
-    hi: { overview: 'अवलोकन', karigars: 'कारीगर', tasks: 'कार्य', chat: 'चैट', total_karigars: 'कुल कारीगर', total_tasks: 'कुल कार्य', in_progress: 'प्रगति पर', completed: 'पूर्ण', add_karigar: 'नया कारीगर जोड़ें', add_task: 'नया कार्य असाइन करें', select_karigar: 'कारीगर चुनें', task_title: 'कार्य का शीर्षक', task_desc: 'विवरण', send: 'भेजें', reset_pin: 'PIN रीसेट करें', no_karigar_selected: 'चैट करने के लिए कारीगर चुनें', online: 'ऑनलाइन', loading: 'लोड हो रहा है...', task_details: 'कार्य विवरण', status: 'स्थिति', assigned_to: 'असाइन किया गया', close: 'बंद करें', all: 'सभी कार्य' }
+    en: { overview: 'Overview', karigars: 'Karigars', tasks: 'Tasks', chat: 'Chat', total_karigars: 'Total Karigars', total_tasks: 'Total Tasks', in_progress: 'In Progress', completed: 'Completed', add_karigar: 'Add New Karigar', add_task: 'Assign New Task', select_karigar: 'Select a Karigar', task_title: 'Task Title', task_desc: 'Description', send: 'Send', reset_pin: 'Reset PIN', no_karigar_selected: 'Select a Karigar to chat', online: 'Online', loading: 'Loading...', task_details: 'Task Details', status: 'Status', assigned_to: 'Assigned to', close: 'Close', all_tasks: 'All Tasks' },
+    gu: { overview: 'ઝાંખી', karigars: 'કારીગરો', tasks: 'કામો', chat: 'ચેટ', total_karigars: 'કુલ કારીગરો', total_tasks: 'કુલ કામો', in_progress: 'ચાલુ કામ', completed: 'પૂર્ણ થયેલ', add_karigar: 'નવો કારીગર ઉમેરો', add_task: 'નવું કામ અસાઈન કરો', select_karigar: 'કારીગર પસંદ કરો', task_title: 'કામનું શીર્ષક', task_desc: 'વર્ણન', send: 'મોકલો', reset_pin: 'PIN રીસેટ કરો', no_karigar_selected: 'ચેટ કરવા માટે કારીગર પસંદ કરો', online: 'ઑનલાઇન', loading: 'લોડ થાય છે...', task_details: 'કામની વિગતો', status: 'સ્થિતિ', assigned_to: 'અસાઈન કરેલ', close: 'બંધ કરો', all_tasks: 'બધા કામો' },
+    hi: { overview: 'अवलोकन', karigars: 'कारीगर', tasks: 'कार्य', chat: 'चैट', total_karigars: 'कुल कारीगर', total_tasks: 'कुल कार्य', in_progress: 'प्रगति पर', completed: 'पूर्ण', add_karigar: 'नया कारीगर जोड़ें', add_task: 'नया कार्य असाइन करें', select_karigar: 'कारीगर चुनें', task_title: 'कार्य का शीर्षक', task_desc: 'विवरण', send: 'भेजें', reset_pin: 'PIN रीसेट करें', no_karigar_selected: 'चैट करने के लिए कारीगर चुनें', online: 'ऑनलाइन', loading: 'लोड हो रहा है...', task_details: 'कार्य विवरण', status: 'स्थिति', assigned_to: 'असाइन किया गया', close: 'बंद करें', all_tasks: 'सभी कार्य' }
   };
 
   if (loading) return (
@@ -223,28 +238,12 @@ export default function OwnerDashboard() {
     </div>
   );
 
+  // જો Onboarding હોય તો Onboarding Wizard બતાવો
   if (isOnboarding && ownerData) {
     return <OnboardingWizard userId={ownerData.id} onComplete={() => setIsOnboarding(false)} />;
   }
 
-  // Filter tasks for tab views
-  const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
-  const completedTasks = tasks.filter(t => t.status === 'Completed');
-
-  // Determine what to display based on activeTab
-  let displayList: any[] = [];
-  let listType: 'karigars' | 'tasks' = 'tasks';
-  if (activeTab === 'karigars') {
-    displayList = karigars;
-    listType = 'karigars';
-  } else if (activeTab === 'all') {
-    displayList = tasks;
-  } else if (activeTab === 'inprogress') {
-    displayList = inProgressTasks;
-  } else if (activeTab === 'completed') {
-    displayList = completedTasks;
-  }
-
+  // નહીંતર રીઅલ ડેશબોર્ડ બતાવો
   return (
     <div className="min-h-screen bg-[#04080F] text-white p-6 relative overflow-hidden">
       <Toaster position="top-right" toastOptions={{ style: { background: '#1a2333', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } }} />
@@ -269,31 +268,33 @@ export default function OwnerDashboard() {
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="glass-panel p-4 rounded-xl border border-white/5 hover:border-purple-500/40 transition-all hover:-translate-y-1">
+             <div className="text-[10px] text-slate-400 flex items-center gap-1"><Users className="w-3 h-3" /> {t[lang].total_karigars}</div>
+             <div className="text-2xl font-bold text-purple-400">{karigars.length}</div>
+          </div>
+          <div className="glass-panel p-4 rounded-xl border border-white/5 hover:border-cyan-500/40 transition-all hover:-translate-y-1">
+             <div className="text-[10px] text-slate-400 flex items-center gap-1"><Package className="w-3 h-3" /> {t[lang].total_tasks}</div>
+             <div className="text-2xl font-bold text-cyan-400">{tasks.length}</div>
+          </div>
+          <div className="glass-panel p-4 rounded-xl border border-white/5 hover:border-orange-500/40 transition-all hover:-translate-y-1">
+             <div className="text-[10px] text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" /> {t[lang].in_progress}</div>
+             <div className="text-2xl font-bold text-orange-400">{tasks.filter(t => t.status === 'In Progress').length}</div>
+          </div>
+          <div className="glass-panel p-4 rounded-xl border border-white/5 hover:border-green-500/40 transition-all hover:-translate-y-1">
+             <div className="text-[10px] text-slate-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t[lang].completed}</div>
+             <div className="text-2xl font-bold text-green-400">{tasks.filter(t => t.status === 'Completed').length}</div>
+          </div>
+        </div>
+
         {/* Tab Navigation */}
         <div className="glass-panel-deep p-2 rounded-2xl border border-white/10 shadow-xl flex flex-wrap gap-2">
           <button 
-            onClick={() => setActiveTab('karigars')}
-            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'karigars' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            onClick={() => setChattingWith(null)}
+            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${!chattingWith ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
           >
-            <Users className="w-4 h-4 inline mr-1" /> {t[lang].karigars} ({karigars.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('all')}
-            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'all' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-          >
-            <LayoutGrid className="w-4 h-4 inline mr-1" /> {t[lang].all} ({tasks.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('inprogress')}
-            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'inprogress' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-          >
-            <Clock className="w-4 h-4 inline mr-1" /> {t[lang].in_progress} ({inProgressTasks.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('completed')}
-            className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'completed' ? 'bg-green-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-          >
-            <CheckCircle2 className="w-4 h-4 inline mr-1" /> {t[lang].completed} ({completedTasks.length})
+            <LayoutGrid className="w-4 h-4 inline mr-1" /> {t[lang].overview}
           </button>
         </div>
 
@@ -301,68 +302,73 @@ export default function OwnerDashboard() {
         <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl min-h-[300px]">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-bold text-white">
-              {activeTab === 'karigars' ? t[lang].karigars : 
-               activeTab === 'all' ? t[lang].all :
-               activeTab === 'inprogress' ? t[lang].in_progress : t[lang].completed}
+              {t[lang].overview}
             </h3>
-            {activeTab === 'karigars' && (
+            <div className="flex gap-2">
               <button onClick={() => setShowAddKarigar(true)} className="bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold border border-purple-500/20 transition flex items-center gap-1 hover:scale-105">
                 <UserPlus className="w-3 h-3" /> {t[lang].add_karigar}
               </button>
-            )}
-            {activeTab === 'all' && (
               <button onClick={() => setShowAddTask(true)} className="bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold border border-cyan-500/20 transition flex items-center gap-1 hover:scale-105">
                 <Plus className="w-3 h-3" /> {t[lang].add_task}
               </button>
-            )}
+            </div>
           </div>
 
-          {/* Render list */}
-          {displayList.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-sm">
-              {activeTab === 'karigars' ? 'No karigars added yet.' : 
-               activeTab === 'all' ? 'No tasks created yet.' :
-               activeTab === 'inprogress' ? 'No tasks in progress.' : 'No completed tasks.'}
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto hide-scrollbar pr-1">
-              {listType === 'karigars' ? (
-                displayList.map(k => (
-                  <div key={k.id} onClick={() => setChattingWith(k.id)} className="glass-panel p-3 rounded-xl border border-white/5 hover:border-purple-400/50 transition-all cursor-pointer flex items-center justify-between hover:scale-[1.01]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-xs font-bold">{k.name.charAt(0)}</div>
-                      <div>
-                        <div className="text-sm font-medium">{k.name}</div>
-                        <div className="text-[10px] text-slate-400">ID: {k.id}</div>
-                      </div>
-                    </div>
+          {/* Render overview: Karigars and Tasks */}
+          <div className="space-y-6">
+            {/* Karigars List */}
+            <div>
+              <h4 className="text-xs text-slate-400 font-medium mb-2">{t[lang].karigars}</h4>
+              <div className="flex flex-wrap gap-2">
+                {karigars.map(k => (
+                  <div 
+                    key={k.id} 
+                    onClick={() => setChattingWith(k.id)}
+                    className="glass-panel px-3 py-2 rounded-xl border border-white/5 hover:border-purple-400/50 transition-all cursor-pointer flex items-center gap-2 hover:scale-105"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold">{k.name.charAt(0)}</div>
+                    <span className="text-xs font-medium truncate max-w-[80px]">{k.name}</span>
                     <button onClick={(e) => { e.stopPropagation(); resetKarigarPin(k.id, k.name); }} className="text-slate-500 hover:text-yellow-400 transition" title={t[lang].reset_pin}><RefreshCw className="w-3 h-3" /></button>
                   </div>
-                ))
-              ) : (
-                displayList.map(task => {
+                ))}
+                {karigars.length === 0 && <p className="text-sm text-slate-500">No karigars added yet.</p>}
+              </div>
+            </div>
+
+            {/* Tasks List */}
+            <div>
+              <h4 className="text-xs text-slate-400 font-medium mb-2">{t[lang].tasks}</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto hide-scrollbar pr-1">
+                {tasks.map(task => {
                   const karigar = karigars.find(k => k.id === task.karigar_id);
                   const statusColor = task.status === 'Completed' ? 'green' : task.status === 'In Progress' ? 'orange' : 'slate';
                   return (
-                    <div key={task.id} onClick={() => setSelectedTask(task)} className="glass-panel p-3 rounded-xl border border-white/5 hover:border-cyan-400/30 transition-all cursor-pointer hover:bg-white/5 flex justify-between items-center">
-                      <div>
-                        <div className="text-sm font-semibold">{task.title}</div>
-                        <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
-                          <span>Assigned to: <span className="text-purple-300">{karigar?.name || 'Unknown'}</span></span>
-                          <span className={`w-1 h-1 rounded-full bg-${statusColor}-400`}></span>
-                          <span className={`text-${statusColor}-300`}>{task.status}</span>
-                          <span className="text-slate-600 text-[8px]"><Calendar className="w-3 h-3 inline" /> {new Date(task.created_at).toLocaleDateString()}</span>
+                    <div 
+                      key={task.id} 
+                      onClick={() => setSelectedTask(task)}
+                      className="glass-panel p-3 rounded-xl border border-white/5 hover:border-cyan-400/30 transition-all cursor-pointer hover:bg-white/5"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-sm font-semibold">{task.title}</div>
+                          <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span>Assigned to: <span className="text-purple-300">{karigar?.name || 'Unknown'}</span></span>
+                            <span className={`w-1 h-1 rounded-full bg-${statusColor}-400`}></span>
+                            <span className={`text-${statusColor}-300`}>{task.status}</span>
+                            <span className="text-slate-600 text-[8px]"><Calendar className="w-3 h-3 inline" /> {new Date(task.created_at).toLocaleDateString()}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   );
-                })
-              )}
+                })}
+                {tasks.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No tasks created yet.</p>}
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Chat Area (Right side - like previous, but now below list for simplicity) */}
+        {/* Chat Area */}
         <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col h-[400px]">
           <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
             <h3 className="text-sm font-bold text-purple-300 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> {t[lang].chat}</h3>
@@ -392,7 +398,7 @@ export default function OwnerDashboard() {
 
       </div>
 
-      {/* Task Details Modal (unchanged) */}
+      {/* Task Details Modal */}
       {selectedTask && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
@@ -420,7 +426,7 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* Modals for Add Karigar and Add Task - unchanged */}
+      {/* Add Karigar Modal */}
       {showAddKarigar && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
@@ -437,6 +443,7 @@ export default function OwnerDashboard() {
         </div>
       )}
 
+      {/* Add Task Modal */}
       {showAddTask && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">

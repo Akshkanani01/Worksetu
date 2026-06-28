@@ -11,11 +11,13 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get('email');
   const otp = searchParams.get('otp');
 
+  console.log("🔍 verify-otp called with:", { email, otp });
+
   if (!email || !otp) {
+    console.error("❌ Missing email or otp");
     return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
   }
 
-  // 1. ડેટાબેઝમાંથી OTP ચકાસો (છેલ્લા 10 મિનિટનો જ માન્ય)
   const { data, error } = await supabase
     .from('otps')
     .select('*')
@@ -27,25 +29,28 @@ export async function GET(req: NextRequest) {
     .single();
 
   if (error || !data) {
+    console.error("❌ OTP verification failed:", error);
     return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
   }
 
-  // 2. OTP મળ્યો → સેશન કૂકી સેટ કરો (Owner તરીકે)
+  await supabase.from('otps').delete().eq('id', data.id);
+  console.log("✅ OTP verified and deleted for:", email);
+
   const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/owner`);
+  
   response.cookies.set('worksetu_session', JSON.stringify({
     role: 'owner',
-    id: email, // અહીં Owner નો ID (email અથવા user ID) મૂકો
+    id: email,
     name: email,
-    businessName: '' // પછીથી Onboarding માં સેટ થશે
+    businessName: ''
   }), {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
+    sameSite: 'lax'
   });
 
-  // 3. (વૈકલ્પિક) ડેટાબેઝમાંથી વપરાયેલ OTP ડિલીટ કરો
-  await supabase.from('otps').delete().eq('id', data.id);
-
+  console.log("✅ Cookie 'worksetu_session' SET for:", email);
   return response;
 }
