@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, ImageIcon, MessageSquare, LogOut, 
   Package, Loader2, Send, Users, Plus, RefreshCw,
   Briefcase, UserPlus, X, Calendar, LayoutGrid,
-  List, CheckCircle
+  List, CheckCircle, Trash2
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase.client';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -17,6 +17,7 @@ export default function OwnerDashboard() {
   const router = useRouter();
   const [lang, setLang] = useState<'en' | 'gu' | 'hi'>('en');
   const [loading, setLoading] = useState(true);
+  const [deletingKarigar, setDeletingKarigar] = useState<string | null>(null);
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [ownerProfile, setOwnerProfile] = useState<any>(null);
   
@@ -26,7 +27,6 @@ export default function OwnerDashboard() {
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   
-  // Tab State
   const [activeTab, setActiveTab] = useState<'karigars' | 'all' | 'inprogress' | 'completed'>('karigars');
   
   const [chattingWith, setChattingWith] = useState<string | null>(null);
@@ -41,11 +41,12 @@ export default function OwnerDashboard() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [selectedKarigarForTask, setSelectedKarigarForTask] = useState('');
+  const [rate, setRate] = useState(''); // <--- NEW: Rate
   const [addingTask, setAddingTask] = useState(false);
 
   const supabase = createClient();
 
-  // === 1. Owner Session Fetch (Real Supabase Auth) ===
+  // === 1. Owner Session Fetch ===
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -169,6 +170,15 @@ export default function OwnerDashboard() {
     }
   };
 
+  const deleteKarigar = async (karigarId: string, karigarName: string) => {
+    if(!confirm(`Are you sure you want to permanently delete Karigar "${karigarName}"? This will also delete all of their assigned tasks.`)) return;
+    setDeletingKarigar(karigarId);
+    await supabase.from('tasks').delete().eq('karigar_id', karigarId);
+    await supabase.from('karigars').delete().eq('id', karigarId);
+    setDeletingKarigar(null);
+    await fetchData();
+  };
+
   const addTask = async () => {
     if (!newTaskTitle.trim() || !selectedKarigarForTask || !ownerData) return;
     setAddingTask(true);
@@ -177,7 +187,8 @@ export default function OwnerDashboard() {
       karigar_id: selectedKarigarForTask,
       title: newTaskTitle,
       description: newTaskDesc,
-      status: 'Pending'
+      status: 'Pending',
+      rate: parseFloat(rate) || 0 // <--- Rate ઉમેર્યું
     });
     setAddingTask(false);
     if (error) toast.error('Error: ' + error.message);
@@ -187,6 +198,7 @@ export default function OwnerDashboard() {
       setNewTaskTitle('');
       setNewTaskDesc('');
       setSelectedKarigarForTask('');
+      setRate(''); // <--- Rate રીસેટ કરો
     }
   };
 
@@ -205,7 +217,7 @@ export default function OwnerDashboard() {
     router.push('/login'); 
   };
 
-  // === 5. Translation Data ===
+  // === 5. Translation ===
   const t = {
     en: { 
       overview: 'Overview', karigars: 'Karigars', tasks: 'Tasks', chat: 'Chat', 
@@ -213,7 +225,7 @@ export default function OwnerDashboard() {
       in_progress: 'In Progress', completed: 'Completed', 
       add_karigar: 'Add New Karigar', add_task: 'Assign New Task', 
       select_karigar: 'Select a Karigar', task_title: 'Task Title', task_desc: 'Description', 
-      send: 'Send', reset_pin: 'Reset PIN', 
+      send: 'Send', reset_pin: 'Reset PIN', rate: 'Rate (₹)',
       no_karigar_selected: 'Select a Karigar to chat', online: 'Online', 
       loading: 'Loading...', task_details: 'Task Details', status: 'Status', 
       assigned_to: 'Assigned to', close: 'Close', all_tasks: 'All Tasks',
@@ -226,7 +238,7 @@ export default function OwnerDashboard() {
       in_progress: 'ચાલુ કામ', completed: 'પૂર્ણ થયેલ', 
       add_karigar: 'નવો કારીગર ઉમેરો', add_task: 'નવું કામ અસાઈન કરો', 
       select_karigar: 'કારીગર પસંદ કરો', task_title: 'કામનું શીર્ષક', task_desc: 'વર્ણન', 
-      send: 'મોકલો', reset_pin: 'PIN રીસેટ કરો', 
+      send: 'મોકલો', reset_pin: 'PIN રીસેટ કરો', rate: 'ભાવ (₹)',
       no_karigar_selected: 'ચેટ કરવા માટે કારીગર પસંદ કરો', online: 'ઑનલાઇન', 
       loading: 'લોડ થાય છે...', task_details: 'કામની વિગતો', status: 'સ્થિતિ', 
       assigned_to: 'અસાઈન કરેલ', close: 'બંધ કરો', all_tasks: 'બધા કામો',
@@ -239,7 +251,7 @@ export default function OwnerDashboard() {
       in_progress: 'प्रगति पर', completed: 'पूर्ण', 
       add_karigar: 'नया कारीगर जोड़ें', add_task: 'नया कार्य असाइन करें', 
       select_karigar: 'कारीगर चुनें', task_title: 'कार्य का शीर्षक', task_desc: 'विवरण', 
-      send: 'भेजें', reset_pin: 'PIN रीसेट करें', 
+      send: 'भेजें', reset_pin: 'PIN रीसेट करें', rate: 'दर (₹)',
       no_karigar_selected: 'चैट करने के लिए कारीगर चुनें', online: 'ऑनलाइन', 
       loading: 'लोड हो रहा है...', task_details: 'कार्य विवरण', status: 'स्थिति', 
       assigned_to: 'असाइन किया गया', close: 'बंद करें', all_tasks: 'सभी कार्य',
@@ -248,9 +260,16 @@ export default function OwnerDashboard() {
     }
   };
 
+  // Skeleton Loader for Premium Look
   if (loading) return (
-    <div className="min-h-screen bg-[#04080F] flex items-center justify-center text-cyan-400">
-      <Loader2 className="w-10 h-10 animate-spin" />
+    <div className="min-h-screen bg-[#04080F] text-white p-6">
+      <div className="space-y-8 max-w-6xl mx-auto">
+        <div className="glass-panel p-4 rounded-2xl h-16 animate-pulse bg-white/5"></div>
+        <div className="grid grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="glass-panel p-4 rounded-xl h-24 animate-pulse bg-white/5"></div>)}
+        </div>
+        <div className="glass-panel rounded-2xl p-6 h-96 animate-pulse bg-white/5"></div>
+      </div>
     </div>
   );
 
@@ -258,7 +277,6 @@ export default function OwnerDashboard() {
     return <OnboardingWizard userId={ownerData.id} onComplete={() => setIsOnboarding(false)} />;
   }
 
-  // Filter tasks based on tab
   const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
   const completedTasks = tasks.filter(t => t.status === 'Completed');
 
@@ -335,7 +353,7 @@ export default function OwnerDashboard() {
         </div>
 
         {/* List Display Area */}
-        <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl min-h-[300px]">
+        <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl min-h-[300px] transition-all">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-bold text-white">
               {activeTab === 'karigars' ? t[lang].karigars : 
@@ -354,23 +372,26 @@ export default function OwnerDashboard() {
             )}
           </div>
 
-          {/* Render list based on active tab */}
+          {/* Karigars List */}
           {activeTab === 'karigars' ? (
             <div className="flex flex-wrap gap-2">
               {karigars.map(k => (
                 <div 
                   key={k.id} 
-                  onClick={() => setChattingWith(k.id)}
-                  className={`glass-panel px-3 py-2 rounded-xl border border-white/5 hover:border-purple-400/50 transition-all cursor-pointer flex items-center gap-2 ${chattingWith === k.id ? 'border-purple-400 bg-purple-500/10 shadow-lg shadow-purple-900/20' : ''} hover:scale-105`}
+                  className={`glass-panel px-3 py-2 rounded-xl border border-white/5 hover:border-purple-400/50 transition-all cursor-pointer flex items-center gap-2 hover:scale-105 ${chattingWith === k.id ? 'border-purple-400 bg-purple-500/10 shadow-lg shadow-purple-900/20' : ''}`}
                 >
                   <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold">{k.name.charAt(0)}</div>
-                  <span className="text-xs font-medium truncate max-w-[80px]">{k.name}</span>
+                  <span className="text-xs font-medium truncate max-w-[80px]" onClick={() => setChattingWith(k.id)}>{k.name}</span>
                   <button onClick={(e) => { e.stopPropagation(); resetKarigarPin(k.id, k.name); }} className="text-slate-500 hover:text-yellow-400 transition" title={t[lang].reset_pin}><RefreshCw className="w-3 h-3" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); deleteKarigar(k.id, k.name); }} className="text-slate-500 hover:text-red-400 transition ml-1" title="Delete Karigar" disabled={deletingKarigar === k.id}>
+                    {deletingKarigar === k.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  </button>
                 </div>
               ))}
               {karigars.length === 0 && <p className="text-sm text-slate-500 w-full text-center py-4">{t[lang].no_karigars}</p>}
             </div>
           ) : (
+            /* Tasks List */
             <div className="space-y-3 max-h-96 overflow-y-auto hide-scrollbar pr-1">
               {(() => {
                 let displayTasks = tasks;
@@ -410,7 +431,7 @@ export default function OwnerDashboard() {
         </div>
 
         {/* Chat Area */}
-        <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col h-[400px]">
+        <div className="glass-panel-deep rounded-2xl p-6 border border-white/10 shadow-xl flex flex-col h-[400px] transition-all">
           <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
             <h3 className="text-sm font-bold text-purple-300 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> {t[lang].chat}</h3>
             {chattingWith && <span className="bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full text-[8px] border border-green-500/20">{t[lang].online}</span>}
@@ -451,9 +472,9 @@ export default function OwnerDashboard() {
 
       </div>
 
-      {/* Task Details Modal with Proof URL */}
+      {/* Task Details Modal */}
       {selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
              <button onClick={() => setSelectedTask(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
              <h3 className="text-xl font-bold mb-4 text-white">{t[lang].task_details}</h3>
@@ -481,7 +502,7 @@ export default function OwnerDashboard() {
 
       {/* Add Karigar Modal */}
       {showAddKarigar && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
              <button onClick={() => setShowAddKarigar(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
              <h3 className="text-xl font-bold mb-4 text-white">{t[lang].add_karigar}</h3>
@@ -496,9 +517,9 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* Add Task Modal */}
+      {/* Add Task Modal with Rate Field */}
       {showAddTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="glass-panel-deep rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl relative animate-slide-up">
              <button onClick={() => setShowAddTask(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition"><X className="w-5 h-5" /></button>
              <h3 className="text-xl font-bold mb-4 text-white">{t[lang].add_task}</h3>
@@ -508,7 +529,18 @@ export default function OwnerDashboard() {
              </select>
              <input type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder={t[lang].task_title} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-3" />
              <textarea value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} placeholder={t[lang].task_desc} rows={3} className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition mb-4 resize-none"></textarea>
-             <div className="flex gap-3">
+             {/* Rate Input */}
+             <div>
+               <label className="text-xs font-medium text-slate-400 mb-1.5 block">{t[lang].rate}</label>
+               <input 
+                 type="number" 
+                 value={rate} 
+                 onChange={(e) => setRate(e.target.value)} 
+                 placeholder="e.g. 500" 
+                 className="w-full bg-[#0A1025] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 transition"
+               />
+             </div>
+             <div className="flex gap-3 mt-3">
                 <button onClick={() => setShowAddTask(false)} className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-xl text-sm text-white transition">Cancel</button>
                 <button onClick={addTask} disabled={addingTask} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-cyan-900/30 transition disabled:opacity-70 flex items-center justify-center gap-2 hover:scale-105">
                    {addingTask ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Task'}
