@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     const { karigarId, pin } = await req.json();
     console.log("🔑 Karigar login attempt:", { karigarId, pin });
 
+    // Validate input
     if (!karigarId || !pin || pin.length !== 4) {
       console.error("❌ Invalid input");
       return NextResponse.json(
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fetch karigar from database
     const { data: karigar, error } = await supabase
       .from('karigars')
       .select('id, pin_hash, name, owner_id')
@@ -36,17 +38,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Verify PIN
     const isValid = bcrypt.compareSync(pin, karigar.pin_hash);
     console.log("🔐 PIN valid?", isValid);
 
     if (!isValid) {
+      console.error("❌ Incorrect PIN");
       return NextResponse.json(
         { success: false, error: 'Incorrect PIN' },
         { status: 401 }
       );
     }
 
-    // Set session cookie
+    // --- Success ---
+    // Create a session cookie
     const response = NextResponse.json(
       { success: true, redirect: '/dashboard/karigar' },
       { status: 200 }
@@ -58,16 +63,17 @@ export async function POST(req: NextRequest) {
       name: karigar.name,
       owner_id: karigar.owner_id
     }), {
-      httpOnly: false,
+      httpOnly: false,          // client can read it
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
+      sameSite: 'lax',
     });
 
-    console.log("✅ Login successful, cookie set");
+    console.log("✅ Login successful, cookie set for:", karigar.id);
     return response;
   } catch (error) {
-    console.error("🔥 Unhandled error:", error);
+    console.error("🔥 Unhandled error in karigar-login:", error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
